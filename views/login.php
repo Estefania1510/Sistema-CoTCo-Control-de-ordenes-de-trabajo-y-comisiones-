@@ -9,7 +9,7 @@
   <html lang="es">
   <head>
     <meta charset="UTF-8">
-    <title>Login - Virtualnet</title>
+    <title>Login - ICT</title>
     <script src="https://cdn.tailwindcss.com"></script>
   </head>
   <body class="bg-gray-100 flex items-center justify-center h-screen">
@@ -17,7 +17,7 @@
 
 
       <div class="flex justify-center mb-4">
-        <img src="../Image/ICT_AZUL.png" alt="Virtualnet" class="h-28 w-auto">
+        <img src="../Image/ICT_AZUL.png" alt="ICT" class="h-28 w-auto">
       </div>
 
       <h2 class="text-2xl font-bold text-center mb-6">Iniciar Sesión</h2>

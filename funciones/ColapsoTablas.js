@@ -1,7 +1,18 @@
 $(document).ready(function () {
 
- 
+
   $('.tabla-responsiva').each(function () {
+
+    if ($(this).attr('id') === 'tablaOrdenes') {
+      return; 
+    }
+
+
+    if ($.fn.DataTable.isDataTable(this)) {
+      return;
+    }
+
+
     $(this).DataTable({
       responsive: {
         details: {
@@ -15,15 +26,14 @@ $(document).ready(function () {
         targets: 0
       }],
       order: [1, 'asc'],
-      paging: false,      
-      searching: false,   
-      info: false,        
-      autoWidth: false,   
+      paging: false,
+      searching: false,
+      info: false,
+      autoWidth: false,
       language: {
         emptyTable: "No hay datos para mostrar",
         infoEmpty: "Sin registros disponibles"
       }
     });
   });
-
 });

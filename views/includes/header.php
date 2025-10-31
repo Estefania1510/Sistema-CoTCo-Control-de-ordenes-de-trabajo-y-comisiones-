@@ -16,6 +16,7 @@ $roles   = implode(", ", $_SESSION['roles'] ?? ["Sin rol"]);
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
   <link href="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/style.min.css" rel="stylesheet" />
   <link href="css/styles.css" rel="stylesheet" />
+  
   <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
 </head>
 <body class="sb-nav-fixed">
@@ -55,7 +56,7 @@ $roles   = implode(", ", $_SESSION['roles'] ?? ["Sin rol"]);
       <div class="sb-sidenav-menu">
         <div class="nav">
           <div class="sb-sidenav-menu-heading" style="color: #ffffff; font-size: 1.2rem;">Menú</div>
-          <a class="nav-link" href="ordenes.php">
+          <a class="nav-link" href="ordenestrabajo.php">
             <div class="sb-nav-link-icon"><i class="fas fa-clipboard-list" style="color: #ffffff;" ></i></div>
             Órdenes de Trabajo
           </a>
@@ -67,9 +68,13 @@ $roles   = implode(", ", $_SESSION['roles'] ?? ["Sin rol"]);
             <div class="sb-nav-link-icon"><i class="fas fa-users-rays" style="color: #ffffff;"></i></div>
             Clientes
           </a>
-          <a class="nav-link" href="catalogomnt.php">
+          <a class="nav-link" href="catalogomantenimiento.php">
             <div class="sb-nav-link-icon"><i  class="fa-solid fa-file" style="color: #ffffff;"></i></div>
             Catalogo de Servicios
+          </a>
+          <a class="nav-link" href="licenciasoftware.php">
+            <div class="sb-nav-link-icon"><i  class="fa-solid fa-key" style="color: #ffffff;"></i></div>
+            Licencia Software
           </a> 
           <a class="nav-link" href="usuarios.php">
             <div class="sb-nav-link-icon"><i class="fas fa-users" style="color: #ffffff;"></i></div>

@@ -1,5 +1,4 @@
 <?php
-
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
@@ -13,7 +12,7 @@ $conn = $conexion->getConnection();
 try {
     $conn->beginTransaction();
 
-    // === DATOS DEL FORMULARIO ===
+    // DATOS DEL FORMULARIO 
     $nombreCliente = trim($_POST['nombreCliente']);
     $telefono = trim($_POST['telefono']);
     $telefono2 = trim($_POST['telefono2']);
@@ -29,7 +28,8 @@ try {
     $idDiseñador = !empty($_POST['idDiseñador']) ? $_POST['idDiseñador'] : null;
     $idUsuario = $_SESSION['idUsuario'];
 
-    // === BUSCAR O INSERTAR CLIENTE ===
+
+    // BUSCAR O INSERTAR CLIENTE 
     $sqlCliente = "SELECT idCliente FROM cliente WHERE NombreCliente = :nombre AND Telefono = :tel";
     $stmt = $conn->prepare($sqlCliente);
     $stmt->execute([':nombre' => $nombreCliente, ':tel' => $telefono]);
@@ -49,21 +49,26 @@ try {
         $idCliente = $conn->lastInsertId();
     }
 
-    // === INSERTAR EN NOTA ===
+    //  INSERTAR EN NOTA 
     $fechaActual = date('Y-m-d');
 
+        if ($cotPendiente) {
+            $subtotal = 0;
+            $diseno   = 0;
+            $total    = 0;
+            $resto    = 0;      
+            if ($anticipo < 0) { 
+                $anticipo = 0;
+            }
+        }
 
-    if ($cotPendiente) {
-        $subtotal = $diseno = $total = $anticipo = $resto = 0;
-    }
 
     $sqlNota = "INSERT INTO nota 
                 (FechaRecepcion, FechaEntrega, Total, Anticipo, Resto, Descripcion, Comentario, idUsuario, idCliente)
-                VALUES (:frecep, :fentrega, :total, :anticipo, :resto, :desc, :coment, :idUser, :idCli)";
+                VALUES (:frecep, NULL, :total, :anticipo, :resto, :desc, :coment, :idUser, :idCli)";
     $stmt = $conn->prepare($sqlNota);
     $stmt->execute([
         ':frecep' => $fechaActual,
-        ':fentrega' => $fechaActual,
         ':total' => $total,
         ':anticipo' => $anticipo,
         ':resto' => $resto,
@@ -75,18 +80,20 @@ try {
 
     $idNota = $conn->lastInsertId();
 
-    // INSERTAR EN NOTADISEÑO ===
-    $sqlDiseno = "INSERT INTO notadiseño (estatus, idNota, idDiseñador) 
-                  VALUES ('Proceso', :idNota, :idDisenador)";
-    $stmt = $conn->prepare($sqlDiseno);
-    $stmt->execute([
-        ':idNota' => $idNota,
-        ':idDisenador' => $idDiseñador
-    ]);
+    // INSERTAR EN NOTADISEÑO 
+        $sqlDiseno = "INSERT INTO notadiseño (estatus, CostoDiseño, idNota, idDiseñador) 
+                      VALUES ('Proceso', :costoDiseno, :idNota, :idDisenador)";
+        $stmt = $conn->prepare($sqlDiseno);
+        $stmt->execute([
+            ':costoDiseno' => $diseno, 
+            ':idNota' => $idNota,
+            ':idDisenador' => $idDiseñador
+        ]);
 
-    $idDiseno = $conn->lastInsertId();
+        $idDiseno = $conn->lastInsertId();
 
-    // INSERTAR MATERIALES ===
+
+    // INSERTAR MATERIALES 
     if (isset($_POST['material'])) {
         $sqlMat = "INSERT INTO material (Material, Cantidad, Precio, Subtotal, idDiseño) 
                    VALUES (:mat, :cant, :precio, :sub, :idDiseno)";
@@ -109,11 +116,11 @@ try {
     }
 
 
-    // === GENERAR PDF DE TICKET (opcional, siguiente paso) ===
+
     header('Content-Type: application/json');
 
 
-    // ===CONFIRMAR TRANSACCIÓN ===
+
     $conn->commit();
 
         echo json_encode([

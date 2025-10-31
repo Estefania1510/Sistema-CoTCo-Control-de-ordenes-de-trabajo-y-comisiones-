@@ -1,0 +1,48 @@
+/* ================================
+   ESTILOS PERSONALIZADOS PARA TABLAS
+   ================================ */
+
+/* Ajuste de spans en celdas (para mostrar texto limpio sin input) */
+#tablaMnt td span,
+#tablaMateriales td span {
+  display: block;
+  max-width: 100%;
+  white-space: normal !important;
+  word-wrap: break-word;
+}
+
+/* Ajuste de fuente en pantallas pequeñas */
+@media (max-width: 768px) {
+  #tablaMnt td span,
+  #tablaMateriales td span {
+    font-size: 0.9rem;
+  }
+}
+
+/* Mejorar alineación del contenido */
+#tablaMnt td,
+#tablaMateriales td {
+  vertical-align: middle;
+}
+
+/* Botones dentro de las tablas */
+#tablaMnt button.btn,
+#tablaMateriales button.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Espaciado y control visual */
+.table thead th {
+  vertical-align: middle;
+  text-align: center;
+}
+
+.table td input.form-control {
+  height: 32px;
+  padding: 3px 8px;
+  font-size: 0.9rem;
+}
+
+

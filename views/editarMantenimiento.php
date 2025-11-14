@@ -71,6 +71,8 @@ $puedeCambiarTecnico = str_contains($rol, 'administrador') || str_contains($rol,
 <form id="formEditarMantenimiento" method="POST">
   <input type="hidden" name="idNota" value="<?= $orden['idNota'] ?>">
   <input type="hidden" name="idMantenimiento" value="<?= $orden['idMantenimiento'] ?>">
+  <input type="hidden" name="idTecnicoOriginal" value="<?= $orden['idTecnico'] ?>">
+
 
   <!-- Cliente -->
   <div class="card mb-4">
@@ -181,7 +183,6 @@ $puedeCambiarTecnico = str_contains($rol, 'administrador') || str_contains($rol,
 
           <tbody>
             <?php 
-            // Bloquear edición si NO es administrador ni encargada
             $bloquearCampos = !(
               str_contains($rol, 'administrador') || 
               str_contains($rol, 'encargado')

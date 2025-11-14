@@ -69,7 +69,7 @@ $roles = $conn->query("SELECT rol FROM rol WHERE estatus='Activo'")->fetchAll(PD
     <!-- Tabla de usuarios -->
     <div class="table-responsive">
       <table class="table table-bordered display nowrap tabla-responsiva" id="tablaUsuarios" style="width:100%">
-        <thead class="table-light">
+        <thead class="table-dark">
           <tr>
             <th></th>
             <th>Nombre</th>
@@ -87,17 +87,25 @@ $roles = $conn->query("SELECT rol FROM rol WHERE estatus='Activo'")->fetchAll(PD
               <td><?= htmlspecialchars($u['Usuario']) ?></td>
               <td><?= htmlspecialchars(ucwords($u['Roles'])) ?></td>
               <td>
-                <span class="badge <?= $u['Estatus'] === 'Activo' ? 'bg-success' : 'bg-secondary' ?>">
+                <span class="badge <?= $u['Estatus'] === 'Activo' ? 'bg-success' : 'bg-danger' ?>">
                   <?= htmlspecialchars($u['Estatus']) ?>
                 </span>
               </td>
               <td>
-                <button class="btn btn-warning btn-sm editarUsuario" data-id="<?= $u['idUsuario'] ?>">
-                  <i class="fa-solid fa-pen-to-square"></i>
+                <button class="btn btn-sm btn-outline-success editarUsuario" data-id="<?= $u['idUsuario'] ?>">
+                  <i class="fas fa-pen"></i>
                 </button>
-                <button class="btn btn-danger btn-sm eliminarUsuario" data-id="<?= $u['idUsuario'] ?>">
-                  <i class="fa-solid fa-trash-can"></i>
-                </button>
+
+                 <?php if ($u['Estatus'] === 'Activo'): ?>
+                    <button class="btn btn-sm btn-outline-danger cambiarEstadoUsuario" data-id="<?= $u['idUsuario'] ?>" data-accion="baja">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  <?php else: ?>
+                    <button class="btn btn-sm btn-outline-secondary cambiarEstadoUsuario" data-id="<?= $u['idUsuario'] ?>" data-accion="reactivar">
+                      <i class="fas fa-undo"></i>
+                    </button>
+                  <?php endif; ?>
+
               </td>
             </tr>
           <?php endforeach; ?>

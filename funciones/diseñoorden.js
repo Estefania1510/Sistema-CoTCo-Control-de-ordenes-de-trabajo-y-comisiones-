@@ -212,6 +212,7 @@ $(function () {
             return {
               label: item.NombreCliente,
               value: item.NombreCliente,
+              idCliente: item.idCliente, 
               telefono: item.Telefono,
               telefono2: item.Telefono2,
               direccion: item.Direccion
@@ -225,13 +226,13 @@ $(function () {
       $("#telefono").val(ui.item.telefono);
       $("#telefono2").val(ui.item.telefono2);
       $("#direccion").val(ui.item.direccion);
+      $("#idCliente").val(ui.item.idCliente);
     }
   });
 });
 
 
 //VALIDAR TELÉFONOS
-
 function validarTelefono(input) {
   input.value = input.value
     .replace(/[^0-9+]/g, '')   
@@ -242,10 +243,7 @@ $('#telefono, #telefono2').on('input', function () {
   validarTelefono(this);
 });
   
-
-  // no letras en anticipo y diseño
   $(document).on('input', 'input[name="anticipo"], input[name="diseño"]', function () {
-    // Permitir solo números y un solo punto decimal
     let valor = this.value.replace(/[^0-9.]/g, '');
     
     // Evita múltiples puntos
@@ -253,7 +251,6 @@ $('#telefono, #telefono2').on('input', function () {
     if (partes.length > 2) {
       valor = partes[0] + '.' + partes.slice(1).join('');
     }
-
     this.value = valor;
   });
 

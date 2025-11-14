@@ -1,13 +1,10 @@
 $(document).ready(function () {
-
-
 const urlParams = new URLSearchParams(window.location.search);
 const estadoURL = urlParams.get('estado');
 
 if (estadoURL) {
   $('#filtroEstado').val(estadoURL); 
 }
-
 
   // Rol actual del usuario
 const rolesUsuario = window.rolesUsuario || "";
@@ -63,7 +60,6 @@ const rolesUsuario = window.rolesUsuario || "";
       {
         data: null,
 
-
         //BOTONES
         render: function (row) {
           let botones = `
@@ -117,12 +113,10 @@ const rolesUsuario = window.rolesUsuario || "";
   }, 300);
 }
 
-
   $('#filtroNombre, #filtroEstado, #filtroTipo, #filtroFecha, #misOrdenes, #OrdenesTrabajadas').on('input change', function () {
     table.ajax.reload();
   });
 
-  // LIMPIARLA URL AL QUITAR EL FILTRO
 $('#filtroEstado').on('change', function () {
   const estado = $(this).val();
 
@@ -174,8 +168,5 @@ $(document).on("click", "[data-ticket]", function () {
     const id = $(this).data("licencia");
     window.location.href = `agregarLicenciaOrden.php?idNota=${id}`;
   });
-
-
-
 
 });

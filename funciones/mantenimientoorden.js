@@ -8,68 +8,71 @@ $(document).ready(function () {
       }
     });
 
-  const tablaMnt = $('#tablaMnt').DataTable({
-    responsive: {
-      details: {
-        type: 'column',
-        target: 0 
+    const tablaMnt = $('#tablaMnt').DataTable({
+      responsive: {
+        details: {
+          type: 'column',
+          target: 0
+        }
+      },
+      columnDefs: [
+        { className: 'dtr-control', orderable: false, targets: 0 }, 
+        { orderable: false, targets: [1, 2, 3, 4] }
+      ],
+      paging: false,
+      searching: false,
+      info: false,
+      ordering: false,
+      autoWidth: false,
+      language: {
+        emptyTable: "No hay datos para mostrar"
       }
-    },
-    columnDefs: [
-      { className: 'control', orderable: false, targets: 0 },
-      { orderable: false, targets: [1, 2, 3, 4] }
-    ],
-    paging: false,
-    searching: false,
-    info: false,
-    ordering: false,
-    autoWidth: false,
-    language: {
-      emptyTable: "No hay datos para mostrar"
+    });
+
+       function calcularCostos() {
+        const isPendiente = $("#cotizacionPendiente").is(":checked");
+        const anticipoField = $("#anticipo");
+        const restoField = $("#resto");
+        const errorDiv = $("#error-anticipo");
+
+        let total = 0;
+        const table = $('#tablaMnt').DataTable();
+        const numFilas = table.rows().count();
+
+        if (isPendiente) {
+            restoField.val("0.00");
+            errorDiv.hide();
+            return;
+        }
+
+        if (numFilas > 0) {
+            total = 0;
+
+            table.rows({ page: 'all' }).every(function () {
+                const node = this.node();
+                const precio = parseFloat($(node).find("input[name='precio[]']").val()) || 0;
+                total += precio;
+            });
+            $("#total").prop("readonly", true);
+            $("#total").val(total.toFixed(2));
+
+        } else {
+            $("#total").prop("readonly", false);
+        }
+
+        const anticipo = parseFloat(anticipoField.val()) || 0;
+        const totalActual = parseFloat($("#total").val()) || 0;
+        const resto = totalActual - anticipo;
+
+        restoField.val(resto.toFixed(2));
+
+        if (anticipo > totalActual) {
+            errorDiv.text("El anticipo excede el total. Se debe regresar el sobrante al cliente.").show();
+        } else {
+            errorDiv.hide();
+        }
     }
-  });
 
-      //calculo costo
-    function calcularCostos() {
-      const isPendiente = $("#cotizacionPendiente").is(":checked");
-      const anticipoField = $("#anticipo");
-      const restoField = $("#resto");
-      const errorDiv = $("#error-anticipo");
-
-      let total = 0;
-
-      if (isPendiente) {
-        $("#total").val("0.00");
-        restoField.val("0.00");
-        errorDiv.hide();
-        return;
-      }
-
-      // Calcular el total
-      const table = $('#tablaMnt').DataTable();
-      table.rows({ page: 'all' }).every(function () {
-        const node = this.node();
-        const precio = parseFloat($(node).find("input[name='precio[]']").val()) || 0;
-        total += precio;
-      });
-
-      $("#total").val(total.toFixed(2));
-
-      // Calcular resto
-      const anticipo = parseFloat(anticipoField.val())
-       || 0;
-      const resto = total - anticipo;
-      restoField.val(resto.toFixed(2));
-
-      if (anticipo > total) {
-        errorDiv.text("El anticipo excede el total. Se debe regresar el sobrante al cliente.").show();
-      } else {
-        errorDiv.hide();
-      }
-    }
-
-
-  // recalcular totales 
   $(document).on('input', "input[name='precio[]'], #anticipo", function () {
     let valor = parseFloat(this.value);
     if (!isNaN(valor) && valor < 0) this.value = '0.00';
@@ -77,15 +80,19 @@ $(document).ready(function () {
   });
 
   // mostrar o ocultar bloque de catalogo
-  $('#agregarProblema').on('change', function () {
-    if (this.checked) {
-      $('#bloqueCatalogo').slideDown();
-      cargarTipos();
-    } else {
-      $('#bloqueCatalogo').slideUp();
-      tablaMnt.clear().draw(); // limpia datos
-    }
-  });
+    $('#agregarProblema').on('change', function () {
+        if (this.checked) {
+            $('#bloqueCatalogo').slideDown();
+            cargarTipos();
+            $("#total").prop("readonly", true);
+        } else {
+            $('#bloqueCatalogo').slideUp();
+            const table = $('#tablaMnt').DataTable();
+            table.clear().draw();
+            $("#total").val("0.00");
+            $("#total").prop("readonly", false);
+        }
+    });
 
   // cargar tipos
   function cargarTipos() {
@@ -163,7 +170,7 @@ $(document).ready(function () {
           <i class="fa-solid fa-trash-can"></i></button></td>
       </tr>
     `;
-
+    
     tablaMnt.row.add($(fila)).draw(false);
   });
 
@@ -215,6 +222,7 @@ $(document).ready(function () {
             return {
               label: item.NombreCliente,
               value: item.NombreCliente,
+              idCliente: item.idCliente,
               telefono: item.Telefono,
               telefono2: item.Telefono2,
               direccion: item.Direccion
@@ -228,6 +236,7 @@ $(document).ready(function () {
       $("#telefono").val(ui.item.telefono);
       $("#telefono2").val(ui.item.telefono2);
       $("#direccion").val(ui.item.direccion);
+      $("#idCliente").val(ui.item.idCliente);
     }
   });
 
@@ -242,7 +251,7 @@ $(document).ready(function () {
 
 
   // validacion anticipo
-  $(document).on('input', 'input[name="anticipo"]', function () {
+  $(document).on('input', 'input[name="anticipo"], input[name="total"]', function () {
     let valor = this.value.replace(/[^0-9.]/g, '');
     const partes = valor.split('.');
     if (partes.length > 2) valor = partes[0] + '.' + partes.slice(1).join('');
@@ -250,18 +259,18 @@ $(document).ready(function () {
   });
 
   // quitar el 0.00 automáticamente
-  $(document).on('focus', 'input[name="anticipo"]', function () {
+  $(document).on('focus', 'input[name="anticipo"], input[name="total"]', function () {
     if (this.value === '0.00') this.value = '';
   });
 
   // si queda vacío poner 0.00
-  $(document).on('blur', 'input[name="anticipo"]', function () {
+  $(document).on('blur', 'input[name="anticipo"], input[name="total"]', function () {
     if (this.value.trim() === '' || isNaN(parseFloat(this.value))) this.value = '0.00';
     calcularCostos();
   });
 
   // Evitar signo negativo
-  $(document).on('keydown', 'input[name="anticipo"]', function (e) {
+  $(document).on('keydown', 'input[name="anticipo"], input[name="total"]', function (e) {
     if (e.key === '-' || e.keyCode === 189 || e.keyCode === 109) e.preventDefault();
   });
 

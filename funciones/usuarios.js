@@ -14,7 +14,6 @@ const tabla = $('#tablaUsuarios').DataTable({
   }
 });
 
-
   //  Filtrar por nombre
   $('#buscarNombre').on('keyup', function () {
     tabla.column(1).search(this.value).draw();
@@ -57,7 +56,6 @@ $(document).on('click', '.editarUsuario', function () {
 
       $('input[name="Rol[]"]').prop('checked', false);
 
-      //roles actuales
       if (data.Roles) {
         const roles = data.Roles.split(',');
         roles.forEach(r => {
@@ -72,7 +70,6 @@ $(document).on('click', '.editarUsuario', function () {
     }
   });
 });
-
 
   //  Guardar o editar usuario
   $('#formUsuario').submit(function (e) {
@@ -110,48 +107,48 @@ $(document).on('click', '.editarUsuario', function () {
     });
   });
 
-  // Inactivar o reactivar usuario
-  $(document).on('click', '.eliminarUsuario', function () {
-    const id = $(this).data('id');
+      // Inactivar o reactivar usuario
+    $(document).on('click', '.cambiarEstadoUsuario', function () {
+      const id = $(this).data('id');
+      const accion = $(this).data('accion');
+      const esBaja = accion === 'baja';
 
-    Swal.fire({
-      title: '¿Cambiar estado del usuario?',
-      text: 'Esto activará o inactivará el acceso del usuario.',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Sí, continuar',
-      cancelButtonText: 'Cancelar'
-    }).then(result => {
-      if (result.isConfirmed) {
-        $.ajax({
-          url: '../controllers/UsuarioController.php',
-          type: 'POST',
-          data: { accion: 'eliminar', id },
-          dataType: 'json',
-          success: function (data) {
-            if (data.status === 'success') {
-              Swal.fire({
-                icon: 'success',
-                title: 'Hecho',
-                text: data.message,
-                timer: 1500,
-                showConfirmButton: false
-              });
+      Swal.fire({
+        title: esBaja ? '¿Dar de baja al usuario?' : '¿Reactivar usuario?',
+        text: esBaja
+          ? 'El usuario no podrá acceder al sistema hasta que se reactive.'
+          : 'El usuario podrá iniciar sesión nuevamente.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, continuar',
+        cancelButtonText: 'Cancelar'
+      }).then(result => {
+        if (result.isConfirmed) {
+          $.ajax({
+            url: '../controllers/UsuarioController.php',
+            type: 'POST',
+            data: { accion: accion === 'baja' ? 'eliminar' : 'eliminar', id },
+            dataType: 'json',
+            success: function (data) {
+              if (data.status === 'success') {
+                Swal.fire({
+                  icon: 'success',
+                  title: 'Hecho',
+                  text: data.message,
+                  timer: 1200,
+                  showConfirmButton: false
+                });
 
-              // Refrescar tabla sin recargar toda la página
-              setTimeout(() => {
-                location.reload();
-              }, 1200);
-            } else {
-              Swal.fire('Error', data.message, 'error');
+                setTimeout(() => location.reload(), 1200);
+              } else {
+                Swal.fire('Error', data.message, 'error');
+              }
+            },
+            error: function () {
+              Swal.fire('Error', 'No se pudo actualizar el estado del usuario.', 'error');
             }
-          },
-          error: function () {
-            Swal.fire('Error', 'No se pudo actualizar el estado del usuario.', 'error');
-          }
-        });
-      }
+          });
+        }
+      });
     });
-  });
-
 });

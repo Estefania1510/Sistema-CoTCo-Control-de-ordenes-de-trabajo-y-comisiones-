@@ -59,12 +59,12 @@ $materiales = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <div class="card mb-4 shadow-sm">
       <div class="card-body row g-3">
           <div class="col-md-6">
-            <label class="form-label">Recepcionado por</label>
+            <label class="form-label fw-bold">Recepcionado por</label>
             <input type="text" class="form-control" value="<?= htmlspecialchars($diseno['RecepcionadoPor']) ?>" readonly>
           </div>
 
           <div class="col-md-6">
-            <label class="form-label">Diseñador asignado</label>
+            <label class="form-label fw-bold">Diseñador asignado</label>
             <input type="text" class="form-control" 
                    value="<?= htmlspecialchars($diseno['Diseñador'] ?? 'En espera') ?>" readonly>
           </div>
@@ -122,7 +122,6 @@ $materiales = $stmt->fetchAll(PDO::FETCH_ASSOC);
                   <th>Material</th>
                   <th>Cantidad</th>
                   <th>Precio</th>
-                  <th>Subtotal</th>
                 </tr>
               </thead>
               <tbody>
@@ -132,7 +131,6 @@ $materiales = $stmt->fetchAll(PDO::FETCH_ASSOC);
                       <td class="text-center"><?= htmlspecialchars($m['Material']) ?></td>
                       <td class="text-center"><?= htmlspecialchars($m['Cantidad']) ?></td>
                       <td class="text-center">$<?= number_format($m['Precio'], 2) ?></td>
-                      <td class="text-center">$<?= number_format($m['Subtotal'], 2) ?></td>
                     </tr>
                   <?php endforeach; ?>
                 <?php else: ?>
@@ -151,6 +149,10 @@ $materiales = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <div class="card-body row g-3">
       <h5 class="mb-3"><i class="fas fa-money-bill me-2"></i> Costos</h5>
 
+      <div class="col-md-4">
+        <label class="form-label">Diseño</label>
+        <input type="text" class="form-control" value="$<?= number_format($diseno['CostoDiseño'], 2) ?>" readonly>
+      </div>
       <div class="col-md-4">
         <label class="form-label">Total</label>
         <input type="text" class="form-control" value="$<?= number_format($diseno['Total'], 2) ?>" readonly>

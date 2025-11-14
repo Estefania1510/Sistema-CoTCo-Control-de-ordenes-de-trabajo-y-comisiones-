@@ -9,6 +9,50 @@ require_once __DIR__ . "/../config/ConnectData.php";
 $conexion = new Conexion($conData);
 $conn = $conexion->getConnection();
 
+    function obtenerPorcentajeComision(PDO $conn): float {
+        $stmt = $conn->prepare("
+            SELECT valor 
+            FROM configcomision 
+            WHERE nombreajuste = 'porcentaje'
+            LIMIT 1
+        ");
+        $stmt->execute();
+        $valor = $stmt->fetchColumn();
+
+        if ($valor === false || $valor === null) {
+            return 30.0;
+        }
+
+        return (float)$valor;
+    }
+
+    function registrarComisionAutomatica($conn, $idNota, $idUsuario, $tipo, $montoBase) {
+        if (!$idUsuario) return;
+
+        // Evitar duplicados
+        $check = $conn->prepare("SELECT idComisiones FROM comisiones WHERE idnota = ? AND tipo = ?");
+        $check->execute([$idNota, $tipo]);
+        if ($check->fetch()) return;
+
+        // Verificar que el usuario no sea administrador
+        $sqlRol = "SELECT r.rol 
+                   FROM usuarioroles ur 
+                   INNER JOIN rol r ON ur.idRol = r.idRol
+                   WHERE ur.idUsuario = ?";
+        $stmtRol = $conn->prepare($sqlRol);
+        $stmtRol->execute([$idUsuario]);
+        $roles = $stmtRol->fetchAll(PDO::FETCH_COLUMN);
+        if (in_array('administrador', $roles)) return;
+
+        $porcentaje = obtenerPorcentajeComision($conn);
+        $montoComision = round($montoBase * ($porcentaje / 100), 2);
+
+        $sql = "INSERT INTO comisiones (tipo, porcentaje, monto, estado, idUsuario, idnota)
+                VALUES (?, ?, ?, 'Orden no Entregada', ?, ?)";
+        $stmt = $conn->prepare($sql);
+        $stmt->execute([$tipo, $porcentaje, $montoComision, $idUsuario, $idNota]);
+    }
+
 try {
     $conn->beginTransaction();
 
@@ -28,40 +72,58 @@ try {
     $idDiseñador = !empty($_POST['idDiseñador']) ? $_POST['idDiseñador'] : null;
     $idUsuario = $_SESSION['idUsuario'];
 
-
     // BUSCAR O INSERTAR CLIENTE 
-    $sqlCliente = "SELECT idCliente FROM cliente WHERE NombreCliente = :nombre AND Telefono = :tel";
-    $stmt = $conn->prepare($sqlCliente);
-    $stmt->execute([':nombre' => $nombreCliente, ':tel' => $telefono]);
-    $cliente = $stmt->fetch(PDO::FETCH_ASSOC);
+        $idClienteForm = $_POST['idCliente'] ?? null;
 
-    if ($cliente) {
-        $idCliente = $cliente['idCliente'];
-    } else {
-        $insertCliente = $conn->prepare("INSERT INTO cliente (NombreCliente, Direccion, Telefono, Telefono2)
-                                         VALUES (:nombre, :dir, :tel, :tel2)");
-        $insertCliente->execute([
-            ':nombre' => $nombreCliente,
-            ':dir' => $direccion,
-            ':tel' => $telefono,
-            ':tel2' => $telefono2
-        ]);
-        $idCliente = $conn->lastInsertId();
-    }
+        if (!empty($idClienteForm)) {
+            // EL CLIENTE YA EXISTE SE ACTUALIZAR
+            $sqlUpdate = "UPDATE cliente 
+                          SET NombreCliente = :nombre,
+                              Direccion = :dir,
+                              Telefono = :tel,
+                              Telefono2 = :tel2
+                          WHERE idCliente = :id";
 
-    //  INSERTAR EN NOTA 
+            $stmtUpdate = $conn->prepare($sqlUpdate);
+            $stmtUpdate->execute([
+                ':nombre' => $nombreCliente,
+                ':dir' => $direccion,
+                ':tel' => $telefono,
+                ':tel2' => $telefono2,
+                ':id' => $idClienteForm
+            ]);
+
+            $idCliente = $idClienteForm;
+
+        } else {
+            // CLIENTE NUEVO SE INSERTAR
+            $insertCliente = $conn->prepare(
+                "INSERT INTO cliente (NombreCliente, Direccion, Telefono, Telefono2)
+                 VALUES (:nombre, :dir, :tel, :tel2)"
+            );
+
+            $insertCliente->execute([
+                ':nombre' => $nombreCliente,
+                ':dir'    => $direccion,
+                ':tel'    => $telefono,
+                ':tel2'   => $telefono2
+            ]);
+
+            $idCliente = $conn->lastInsertId();
+        }
+
+    //  INSERTAR EN NOTA    
     $fechaActual = date('Y-m-d');
 
         if ($cotPendiente) {
             $subtotal = 0;
-            $diseno   = 0;
-            $total    = 0;
-            $resto    = 0;      
+            $diseno = 0;
+            $total = 0;
+            $resto = 0;      
             if ($anticipo < 0) { 
                 $anticipo = 0;
             }
         }
-
 
     $sqlNota = "INSERT INTO nota 
                 (FechaRecepcion, FechaEntrega, Total, Anticipo, Resto, Descripcion, Comentario, idUsuario, idCliente)
@@ -91,7 +153,9 @@ try {
         ]);
 
         $idDiseno = $conn->lastInsertId();
-
+            if (!empty($idDiseñador)) {
+                registrarComisionAutomatica($conn, $idNota, $idDiseñador, 'Diseño', $diseno);
+            }
 
     // INSERTAR MATERIALES 
     if (isset($_POST['material'])) {
@@ -115,14 +179,10 @@ try {
         }
     }
 
-
-
     header('Content-Type: application/json');
 
-
-
     $conn->commit();
-
+    
         echo json_encode([
         'status' => 'success',
         'folio' => $idNota

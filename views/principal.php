@@ -1,13 +1,14 @@
 <?php include 'includes/header.php'; ?>
 
-<h1 class="mt-4"><?= $usuario ?></h1>
+<h1 class="mt-4 text-dark fw-bold mb-0"><?= $usuario ?></h1>
 <ol class="breadcrumb mb-4">
-  <li class="breadcrumb-item active"><?= $roles ?></li>
+ <li class="text-primary fw-semibold fs-5 mb-0"><?= htmlspecialchars(implode(", ", $_SESSION['roles'])) ?></li>
 </ol>
 
 <!-- Tarjetas -->
 <div class="container mt-4">
   <div class="row">
+
     <!-- En Proceso -->
     <div class="col-md-4">
       <div class="card mb-4 border-0 shadow-sm" style="background-color:#fff8bd; color:#e2b808; cursor:pointer;"
@@ -83,7 +84,6 @@ document.addEventListener("DOMContentLoaded", () => {
   fetch("../controllers/contarOrdenes.php")
     .then(res => res.json())
     .then(data => {
-      // Asigna los valores a cada tarjeta
       document.getElementById("countProceso").textContent = data.Proceso ?? 0;
       document.getElementById("countTequila").textContent = data.EnviadoTequila ?? 0;
       document.getElementById("countEntregado").textContent = data.Entregado ?? 0;

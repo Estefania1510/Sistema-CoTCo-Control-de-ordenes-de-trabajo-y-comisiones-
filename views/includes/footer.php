@@ -24,8 +24,8 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <!-- scripts -->
-<script src="../funciones/ColapsoTablas.js"></script>
 
+<script src="../funciones/ColapsoTablas.js"></script>
 
 <script src="js/scripts.js"></script>
 

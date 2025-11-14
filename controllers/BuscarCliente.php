@@ -9,7 +9,10 @@ $term = $_GET['term'] ?? '';
 
 $sql = "SELECT idCliente, NombreCliente, Direccion, Telefono, Telefono2
         FROM cliente
-        WHERE NombreCliente LIKE :term";
+        WHERE NombreCliente LIKE :term
+        ORDER BY NombreCliente ASC
+        LIMIT 10";
+
 $stmt = $conn->prepare($sql);
 $stmt->execute([":term" => "%$term%"]);
 $clientes = $stmt->fetchAll(PDO::FETCH_ASSOC);

@@ -60,13 +60,13 @@ $servicios = $stmt->fetchAll(PDO::FETCH_ASSOC);
   <div class="card mb-4 shadow-sm">
     <div class="card-body row g-3">
       <div class="col-md-6">
-        <label class="form-label">Recepcionado por</label>
+        <label class="form-label fw-bold">Recepcionado por</label>
         <input type="text" class="form-control" 
                value="<?= htmlspecialchars($mantenimiento['RecepcionadoPor']) ?>" readonly>
       </div>
 
       <div class="col-md-6">
-        <label class="form-label">Técnico asignado</label>
+        <label class="form-label fw-bold">Técnico asignado</label>
         <input type="text" class="form-control" 
                value="<?= htmlspecialchars($mantenimiento['Tecnico'] ?? 'En espera') ?>" readonly>
       </div>
@@ -76,7 +76,7 @@ $servicios = $stmt->fetchAll(PDO::FETCH_ASSOC);
   <!-- DATOS DEL CLIENTE -->
   <div class="card mb-4 shadow-sm">
     <div class="card-body row g-3">
-      <h5 class="mb-3"><i class="fas fa-user me-2"></i> Datos del Cliente</h5>
+      <h5 class="mb-3"><i class="fas fa-user me-2 " ></i> Datos del Cliente</h5>
 
       <div class="col-md-6">
         <label class="form-label">Nombre del Cliente</label>

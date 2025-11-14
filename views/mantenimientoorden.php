@@ -6,7 +6,6 @@
   $conexion = new Conexion($conData);
   $conn = $conexion->getConnection();
 
-
   $sql = "SELECT  u.idUsuario, u.NombreUsuario
           FROM usuario u
           INNER JOIN usuarioroles ur ON u.idUsuario = ur.idUsuario
@@ -16,7 +15,6 @@
   $stmt = $conn->prepare($sql);
   $stmt->execute();
   $tecnicos = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
   ?>
 
     <div class="d-flex justify-content-between align-items-center mt-2">
@@ -30,7 +28,6 @@
       <li class="breadcrumb-item active">Registro de pedido de diseño</li>
     </ol>
 
-
 <form id="formMantenimiento" method="POST">
 
   <!-- Cliente -->
@@ -42,6 +39,7 @@
         <div class="input-group">
           <input type="text" name="nombreCliente" id="nombreCliente" class="form-control" required>
         </div>
+        <input type="hidden" name="idCliente" id="idCliente">
       </div>
       <div class="col-md-3">
         <label class="form-label">Teléfono</label>
@@ -90,7 +88,6 @@
           <textarea type="text" id="descEquipo" name="descEquipo" class="form-control" 
           placeholder="Ejemplo: Color, algun rayon etc." required></textarea>
         </div>
-
       </div>
     </div>
   </div>
@@ -98,7 +95,6 @@
   <div class="card mb-4 shadow-sm">
     <div class="card-body row g-3">
       <h5 class="mb-3"><i class="fas fa-tools me-2"></i> Problema del Equipo</h5>
-
         <div class="col-md-4">
           <label class="form-label">Descripcion del Problema</label>
           <textarea type="text" id="descProblema" name="descProblema" class="form-control" 
@@ -170,7 +166,7 @@
       <div class="row g-3">
         <div class="col-md-4">
           <label class="form-label">Total</label>
-          <input type="number" step="0.01" id="total" name="total" class="form-control" value="0.00" readonly>
+          <input type="number" step="0.01" id="total" name="total" class="form-control" value="0.00" >
         </div>
         <div class="col-md-4">
           <label class="form-label">Anticipo</label>
@@ -193,7 +189,6 @@
       </div>
     </div>
   </div>
-
 
   <!--ASIGNACIÓN  -->
   <div class="card mb-3 shadow-sm">
@@ -231,13 +226,29 @@
      
       <!--  GUARDAR -->
     <script src="../funciones/alertas.js"></script>
-
     <script>
     document.getElementById("formMantenimiento").addEventListener("submit", async (e) => {
       e.preventDefault();
 
+      const descProblema = $("#descProblema").val().trim();
+      let filasCatalogo = 0;
+      if ($.fn.DataTable && $.fn.DataTable.isDataTable('#tablaMnt')) {
+        filasCatalogo = $('#tablaMnt').DataTable().rows().count();
+      } else {
+        filasCatalogo = $("#tablaMnt tbody tr").length;
+      }
+
+      if (descProblema === "" && filasCatalogo === 0) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Datos incompletos',
+          text: 'Debes agregar una descripción del problema o al menos un servicio del catálogo.',
+        });
+        return; 
+      }
+
       const formData = new FormData(e.target);
-     formData.append("idUsuario", <?= $_SESSION['idUsuario'] ?>);
+      formData.append("idUsuario", <?= $_SESSION['idUsuario'] ?>);
       formData.append("tecnico", document.getElementById("tecnico").value);
 
       try {
@@ -248,33 +259,30 @@
 
         const data = await res.json();
 
-          if (data.status === "success") {
-              alertaGuardadoExito(data.folio);
-              e.target.reset();
-
-              // Ocultar bloque de catálogo 
-              $('#bloqueCatalogo').slideUp();
-              $('#agregarProblema').prop('checked', false);
-              $('#tipoServicio').val('');
-              $('#servicioCatalogo').val('');
-              $('#tablaMnt').DataTable().clear().draw();
-
-              //Actualizar el folio automáticamente
-              $.ajax({
-                url: "../controllers/obtenerFolio.php",
-                method: "GET",
-                dataType: "json",
-                success: function (data) {
-                  $("#folio").text(data.folio);
-                }
-              });
-
-              setTimeout(() => {
-                window.open(`../controllers/TicketMantenimiento.php?idNota=${data.idNota}`, "_blank");
-              }, 1600);
+        if (data.status === "success") {
+          alertaGuardadoExito(data.idNota);
+          e.target.reset();
+          $('#bloqueCatalogo').slideUp();
+          $('#agregarProblema').prop('checked', false);
+          $('#tipoServicio').val('');
+          $('#servicioCatalogo').val('');
+          if ($.fn.DataTable && $.fn.DataTable.isDataTable('#tablaMnt')) {
+            $('#tablaMnt').DataTable().clear().draw();
           }
 
-       else {
+          $.ajax({
+            url: "../controllers/obtenerFolio.php",
+            method: "GET",
+            dataType: "json",
+            success: function (dataFolio) {
+              $("#folio").text(dataFolio.folio);
+            }
+          });
+
+          setTimeout(() => {
+            window.open(`../controllers/TicketMantenimiento.php?idNota=${data.idNota}`, "_blank");
+          }, 1600);
+        } else {
           alertaError(data.error || data.message);
         }
       } catch (err) {
@@ -282,7 +290,6 @@
       }
     });
     </script>
-
 </form>
 
 <?php include 'includes/footer.php'; ?>

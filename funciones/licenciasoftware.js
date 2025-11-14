@@ -1,6 +1,4 @@
 $(document).ready(function () {
-
-  // Cargar lista de software desde catalogomnt
 fetch("../controllers/SoftwareCatalogo.php")
 
   .then(res => res.json())
@@ -30,7 +28,19 @@ fetch("../controllers/SoftwareCatalogo.php")
       { data: "idLS" },
       { data: "Licencia" },
       { data: "Software" },
-      { data: "Estatus" },
+      {
+        data: 'Estatus',
+        render: function (data) {
+          const colores = {
+            'Libre': 'badge bg-primary',
+            'Instalada': 'badge bg-success',
+            'Baja': 'badge bg-danger',
+          };
+          return `<span class="${colores[data] || 'badge bg-light'}">${data}</span>`;
+        }
+      },
+
+
       {
         data: "idNota",
         render: data => data ? data : "—"

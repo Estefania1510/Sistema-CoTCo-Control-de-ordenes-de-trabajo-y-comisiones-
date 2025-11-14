@@ -12,7 +12,8 @@ if (!$idNota) {
 }
 
 // CONSULTAS
-$sql = "SELECT n.idNota, n.FechaRecepcion, n.Total, n.Anticipo, n.Resto, n.Descripcion,
+$sql = "SELECT n.idNota, DATE_FORMAT(n.FechaRecepcion, '%d-%m-%Y') AS FechaRecepcion,
+               n.Total, n.Anticipo, n.Resto, n.Descripcion,
                n.Comentario, c.NombreCliente, c.Telefono, c.Telefono2, c.Direccion,
                u.NombreUsuario AS RecepcionadoPor
         FROM nota n

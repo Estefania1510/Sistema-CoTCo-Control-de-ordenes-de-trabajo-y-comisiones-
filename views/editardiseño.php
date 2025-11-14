@@ -50,8 +50,6 @@ $rol = implode(',', $roles);
 $puedeEditar = in_array($rol, ['administrador', 'encargado']) || ($rol == 'diseñador' && $orden['idDiseñador'] == $idUsuario);
 $puedeCambiarDiseñador = in_array($rol, ['administrador', 'encargado']);
 ?>
-
-
     <div class="d-flex justify-content-between align-items-end mt-2">
       <h1 class="mt-2 text-dark fw-bold mb-0">Editar Orden de Diseño</h1>
       <span class="badge bg-success fs-5 me-5" style="min-width: 130px; font-size: 1.1rem;">Folio: <?= $orden['idNota'] ?></span>
@@ -60,11 +58,11 @@ $puedeCambiarDiseñador = in_array($rol, ['administrador', 'encargado']);
       <li class="breadcrumb-item active"></li>
     </ol>
 
-
 <form id="formEditarDiseno" method="POST">
 
   <input type="hidden" name="idNota" value="<?= $orden['idNota'] ?>">
   <input type="hidden" name="idDiseño" value="<?= $orden['idDiseño'] ?>">
+  <input type="hidden" name="idDiseñadorOriginal" value="<?= $orden['idDiseñador'] ?>">
 
   <!-- Cliente -->
   <div class="card mb-4">
@@ -185,7 +183,6 @@ $puedeCambiarDiseñador = in_array($rol, ['administrador', 'encargado']);
     </div>
   </div>
 
-
   <!-- Estatus y diseñador -->
   <div class="card mb-4">
     <div class="card-body row g-3">
@@ -236,8 +233,6 @@ $puedeCambiarDiseñador = in_array($rol, ['administrador', 'encargado']);
   const rolUsuario = "<?= $rol ?>";
 </script>
 <script src="../funciones/editardiseño.js"></script>
-
-  <!-- bloquear fecha de entrega cuando estatus no es entregado -->
 <script>
 document.addEventListener("DOMContentLoaded", function() {
   const estatusSelect = document.getElementById("estatus");

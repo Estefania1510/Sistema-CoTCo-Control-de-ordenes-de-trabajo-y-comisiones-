@@ -12,10 +12,10 @@ if (!$idNota) {
 }
 
 // CONSULTA NOTA 
-$sql = "SELECT n.idNota, n.FechaRecepcion, n.Total, n.Anticipo, n.Resto, 
+$sql = "SELECT n.idNota, DATE_FORMAT(n.FechaRecepcion, '%d-%m-%Y') AS FechaRecepcion, n.Total, n.Anticipo, n.Resto, 
                n.Descripcion, n.Comentario, 
                c.NombreCliente, c.Telefono, c.Telefono2, c.Direccion,
-               u.NombreUsuario AS RecepcionadoPor
+               u.NombreUsuario AS RecepcionadoPor  
         FROM nota n
         INNER JOIN cliente c ON n.idCliente = c.idCliente
         INNER JOIN usuario u ON n.idUsuario = u.idUsuario
@@ -127,18 +127,14 @@ if (!empty($mantenimiento['SugerenciaTecn'])) {
 }
 
 // SERVICIOS SELECCIONADOS
-// SERVICIOS SELECCIONADOS
 if ($servicios) {
   $pdf->SetFont('DejaVu','B',8);
   $pdf->Cell(0,5,'Servicios:',0,1);
   $pdf->Ln(1);
 
   foreach ($servicios as $s) {
-    // Nombre del tipo en negrita
     $pdf->SetFont('DejaVu','B',8);
     $pdf->MultiCell(0,4,"• ".$s['NombreTipo'].":");
-
-    // Descripción del servicio con sangría
     $pdf->SetFont('DejaVu','',8);
     $texto = "   ".$s['Servicio'];
     if ($s['Precio'] > 0) {

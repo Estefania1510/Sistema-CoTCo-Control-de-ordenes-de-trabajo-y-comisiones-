@@ -41,6 +41,7 @@
         <div class="input-group">
           <input type="text" name="nombreCliente" id="nombreCliente" class="form-control" required>
         </div>
+          <input type="hidden" name="idCliente" id="idCliente">
       </div>
       <div class="col-md-3">
         <label class="form-label">Teléfono</label>
@@ -89,13 +90,10 @@
           </tr>
         </tbody>
       </table>
-
       <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="addRow">Agregar Material</button>
     </div>
 
-
   <!-- Costos -->
-  
   <div class="card-body row g-3">
   <div class="col-md-6 d-flex flex-column gap-3">
     <div>
@@ -111,8 +109,6 @@
       <input type="number" step="0.01" name="total" class="form-control" value="0.00" readonly>
     </div>
   </div>
-
-
 
   <div class="col-md-6 d-flex flex-column gap-3 align-items-end">
  
@@ -142,7 +138,6 @@
     </div>
   </div>
 
-
   <div class="card mb-4">
     <div class="card-body row g-3">
       <h5 class="mb-3"><i class="fas fa-users-cog me-2"></i> Asignación</h5>
@@ -162,7 +157,6 @@
     </div>
   </div>
 
-
   <div class="text-center mb-5">
     <button type="submit" class="btn btn-primary btn-lg fw-bold px-4">
       <i class="bi bi-save"></i> Guardar Orden
@@ -179,6 +173,8 @@
   document.getElementById("formOrdenDiseno").addEventListener("submit", async (e) => {
     e.preventDefault(); 
 
+     console.log("ID ENVIADO:", document.getElementById("idCliente").value); // ← PRUEBA
+
     const formData = new FormData(e.target);
 
     try {
@@ -192,7 +188,7 @@
         alertaGuardadoExito(data.folio);
         e.target.reset();
 
-        // 🔹 Actualizar el folio automáticamente
+        //Actualizar el folio automáticamente
         $.ajax({
           url: "../controllers/obtenerFolio.php",
           method: "GET",
@@ -201,8 +197,6 @@
             $("#folio").text(data.folio);
           }
         });
-
-        
         setTimeout(() => {
           window.open(`../controllers/TicketDiseno.php?idNota=${data.folio}`, '_blank');
         }, 1600);

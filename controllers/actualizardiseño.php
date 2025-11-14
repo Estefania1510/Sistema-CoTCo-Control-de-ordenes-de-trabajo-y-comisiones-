@@ -40,6 +40,39 @@ try {
   $stmt2->bindValue(4, $idDiseño, PDO::PARAM_INT);
   $stmt2->execute();
 
+        // ACTUALIZAR ESTADO DE COMISION AUTOMATICAMENTE
+    if (!empty($estatus)) {
+      $stmtCheck = $conn->prepare("
+        SELECT c.idComisiones 
+        FROM comisiones c
+        INNER JOIN notadiseño nd ON nd.idNota = c.idnota
+        WHERE nd.idDiseño = ?
+        LIMIT 1
+      ");
+      $stmtCheck->execute([$idDiseño]);
+      $idComision = $stmtCheck->fetchColumn();
+
+      if ($idComision) {
+        if ($estatus === 'Entregado') {
+          $stmtUpdate = $conn->prepare("
+            UPDATE comisiones 
+            SET estado = 'Orden Entregada' 
+            WHERE idComisiones = ? AND estado != 'Pagado'
+          ");
+          $stmtUpdate->execute([$idComision]);
+        } else {
+          // Si vuelve a otro estado, marcar como no entregada
+          $stmtUpdate = $conn->prepare("
+            UPDATE comisiones 
+            SET estado = 'Orden no Entregada' 
+            WHERE idComisiones = ? AND estado != 'Pagado'
+          ");
+          $stmtUpdate->execute([$idComision]);
+        }
+      }
+    }
+
+
   $conn->prepare("DELETE FROM material WHERE idDiseño=?")->execute([$idDiseño]);
 
   $stmtMat = $conn->prepare("INSERT INTO material (Material, Cantidad, Precio, Subtotal, idDiseño) VALUES (?, ?, ?, ?, ?)");
@@ -86,6 +119,42 @@ $stmtUpd = $conn->prepare("
 ");
 $stmtUpd->execute([$total, $resto, $anticipo, $fechaEntrega, $idNota]);
 
+// REASIGNACIÓN DE COMISIÓN 
+$idDiseOriginal = $_POST['idDiseñadorOriginal'] ?? null;
+if (!empty($idDiseñador) && $idDiseñador !== $idDiseOriginal) {
+  $stmtC = $conn->prepare("
+    SELECT idComisiones 
+    FROM comisiones 
+    WHERE idnota = ? AND tipo = 'Diseño'
+    LIMIT 1
+  ");
+  $stmtC->execute([$idNota]);
+  $idComision = $stmtC->fetchColumn();
+
+  if ($idComision) {
+    $stmtUp = $conn->prepare("UPDATE comisiones SET idUsuario = ? WHERE idComisiones = ?");
+    $stmtUp->execute([$idDiseñador, $idComision]);
+  } 
+}
+
+//ACTUALIZAR MONTO DE COMISIÓN SI CAMBIA TOTAL O COSTO 
+if ($idComision) {
+  $stmtP = $conn->prepare("SELECT porcentaje FROM comisiones WHERE idComisiones = ?");
+  $stmtP->execute([$idComision]);
+  $porcentaje = (float) $stmtP->fetchColumn();
+
+  if ($porcentaje <= 0) $porcentaje = 30;
+
+  $nuevoMonto = ($diseno * $porcentaje) / 100;
+
+  // Actualizar comisión con el nuevo monto
+  $stmtUpdCom = $conn->prepare("
+    UPDATE comisiones 
+    SET monto = ?, porcentaje = ? 
+    WHERE idComisiones = ?
+  ");
+  $stmtUpdCom->execute([$nuevoMonto, $porcentaje, $idComision]);
+}
 
 $conn->commit();
 
@@ -93,8 +162,6 @@ echo json_encode([
   "status" => "success",
   "message" => "La orden de diseño fue actualizada correctamente."
 ]);
-
-
 
 } catch (Exception $e) {
   $conn->rollBack();

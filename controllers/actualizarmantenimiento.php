@@ -23,90 +23,179 @@ $sugerencia = trim($_POST['sugerencia'] ?? '');
 $total = floatval($_POST['total'] ?? 0);
 $anticipo = floatval($_POST['anticipo'] ?? 0);
 $resto = floatval($_POST['resto'] ?? 0);
+
 $tipos = $_POST['tipo'] ?? [];
 $servicios = $_POST['servicio'] ?? [];
 $precios = $_POST['precio'] ?? [];
 
 try {
-  $conn->beginTransaction();
+    $conn->beginTransaction();
+    $stmtN = $conn->prepare("
+        UPDATE nota
+        SET Descripcion = ?, Comentario = ?, Total = ?, Anticipo = ?, Resto = ?, FechaEntrega = ?
+        WHERE idNota = ?
+    ");
+    $stmtN->execute([
+        $descProblema,
+        $sugerencia,
+        $total,
+        $anticipo,
+        $resto,
+        $fechaEntrega,
+        $idNota
+    ]);
 
-// REASIGNACIÓN DE COMISIÓN 
-$idComision = null;
-$idTecOriginal = $_POST['idTecnicoOriginal'] ?? null;
-if (!empty($idTecnico) && $idTecnico !== $idTecOriginal) {
+    $stmtM = $conn->prepare("
+        UPDATE notamantenimiento
+        SET Equipo=?, Marca=?, Model=?, Contraseña=?, Accesorios=?, 
+            SugerenciaTecn=?, Estatus=?, DescripcionEquipo=?, idTecnico=?
+        WHERE idMantenimiento = ?
+    ");
+    $stmtM->execute([
+        $equipo, $marca, $modelo, $contrasena, $accesorios,
+        $sugerencia, $estatus, $descEquipo,
+        $idTecnico ?: null,
+        $idMantenimiento
+    ]);
 
-    // Buscar comisión existente
+    $conn->prepare("DELETE FROM auxservicios WHERE idMantenimiento = ?")
+         ->execute([$idMantenimiento]);
+
+    $stmtServ = $conn->prepare("
+        INSERT INTO auxservicios (idMantenimiento, idCatalogoMnt, Precio)
+        VALUES (?, (SELECT idCatalogoMnt FROM catalogomnt WHERE Servicio=? LIMIT 1), ?)
+    ");
+
+    for ($i = 0; $i < count($servicios); $i++) {
+        $serv = trim($servicios[$i]);
+        $precio = floatval($precios[$i] ?? 0);
+
+        if ($serv !== "") {
+            $stmtServ->execute([$idMantenimiento, $serv, $precio]);
+        }
+    }
+
     $stmtC = $conn->prepare("
-        SELECT idComisiones 
-        FROM comisiones 
+        SELECT idComisiones FROM comisiones
         WHERE idnota = ? AND tipo = 'Mantenimiento'
         LIMIT 1
     ");
     $stmtC->execute([$idNota]);
     $idComision = $stmtC->fetchColumn();
 
-    // Si existe comisión - reasignar técnico
-    if ($idComision) {
-        $stmtUp = $conn->prepare("
+    if (!$idComision && !empty($idTecnico)) {
+
+        $stmtPor = $conn->prepare("
+            SELECT valor FROM configcomision WHERE nombreajuste = 'porcentaje'
+        ");
+        $stmtPor->execute();
+        $porcentaje = (float)$stmtPor->fetchColumn() ?: 30;
+        $montoInicial = ($total * $porcentaje) / 100;
+        $estadoComision = 'Orden no Entregada';
+        if ($estatus === 'Entregado') $estadoComision = 'Orden Entregada';
+        if ($estatus === 'Cancelado') $estadoComision = 'Orden Cancelada';
+
+        if ($estadoComision === 'Orden Cancelada') {
+            $montoInicial = 0;
+        }
+
+        $stmtInsert = $conn->prepare("
+            INSERT INTO comisiones (tipo, porcentaje, fechapago, monto, estado, idUsuario, idnota)
+            VALUES ('Mantenimiento', ?, NULL, ?, ?, ?, ?)
+        ");
+        $stmtInsert->execute([
+            $porcentaje,
+            $montoInicial,
+            $estadoComision,
+            $idTecnico,
+            $idNota
+        ]);
+
+        $idComision = $conn->lastInsertId();
+    }
+
+    $idTecOriginal = $_POST['idTecnicoOriginal'] ?? null;
+
+    if ($idComision && !empty($idTecnico) && $idTecnico !== $idTecOriginal) {
+        $conn->prepare("
             UPDATE comisiones 
             SET idUsuario = ? 
             WHERE idComisiones = ?
+        ")->execute([$idTecnico, $idComision]);
+    }
+
+    if ($idComision) {
+
+        if ($estatus === 'Cancelado') {
+
+            $conn->prepare("
+                UPDATE comisiones
+                SET estado='Orden Cancelada', monto=0, fechapago=NULL
+                WHERE idComisiones=? AND estado!='Pagado'
+            ")->execute([$idComision]);
+
+        } elseif ($estatus === 'Entregado') {
+
+            $conn->prepare("
+                UPDATE comisiones
+                SET estado='Orden Entregada'
+                WHERE idComisiones=? AND estado!='Pagado'
+            ")->execute([$idComision]);
+
+        } else {
+
+            $conn->prepare("
+                UPDATE comisiones
+                SET estado='Orden no Entregada'
+                WHERE idComisiones=? AND estado!='Pagado'
+            ")->execute([$idComision]);
+        }
+    }
+
+    if ($idComision) {
+
+        $stmtEstado = $conn->prepare("
+            SELECT estado FROM comisiones WHERE idComisiones=?
         ");
-        $stmtUp->execute([$idTecnico, $idComision]);
-    }
-}
+        $stmtEstado->execute([$idComision]);
+        $estadoActual = $stmtEstado->fetchColumn();
 
-if (empty($idComision)) {
-    $stmtC = $conn->prepare("
-        SELECT idComisiones 
-        FROM comisiones 
-        WHERE idnota = ? AND tipo = 'Mantenimiento'
-        LIMIT 1
-    ");
-    $stmtC->execute([$idNota]);
-    $idComision = $stmtC->fetchColumn();
-}
+        if ($estadoActual !== 'Orden Cancelada') {
 
-if ($idComision) {
+            $stmtP = $conn->prepare("
+                SELECT porcentaje FROM comisiones WHERE idComisiones=?
+            ");
+            $stmtP->execute([$idComision]);
+            $porcentaje = (float)$stmtP->fetchColumn() ?: 30;
 
-    $stmtP = $conn->prepare("SELECT porcentaje FROM comisiones WHERE idComisiones = ?");
-    $stmtP->execute([$idComision]);
-    $porcentaje = (float)$stmtP->fetchColumn();
+            $nuevoMonto = ($total * $porcentaje) / 100;
 
-    if ($porcentaje <= 0) {
-        $porcentaje = 10; // valor de seguridad
+            $conn->prepare("
+                UPDATE comisiones 
+                SET monto=?, porcentaje=?
+                WHERE idComisiones=?
+            ")->execute([$nuevoMonto, $porcentaje, $idComision]);
+        }
     }
 
-    $nuevoMonto = ($total * $porcentaje) / 100;
+    $conn->commit();
 
-    $stmtUpdCom = $conn->prepare("
-        UPDATE comisiones
-        SET monto = ?, porcentaje = ?
-        WHERE idComisiones = ?
-    ");
-    $stmtUpdCom->execute([$nuevoMonto, $porcentaje, $idComision]);
-}
-
-$conn->commit();
-
-echo json_encode([
-    "status" => "success",
-    "message" => "La orden de mantenimiento fue actualizada correctamente."
-]);
+    echo json_encode([
+        "status" => "success",
+        "message" => "La orden de mantenimiento fue actualizada correctamente."
+    ]);
 
 } catch (Exception $e) {
 
-$conn->rollBack();
+    $conn->rollBack();
 
-$log = $conn->prepare("
-    INSERT INTO logerror (metodo, excepcion) 
-    VALUES ('actualizarmantenimiento', ?)
-");
-$log->execute([$e->getMessage()]);
+    $conn->prepare("
+        INSERT INTO logerror (metodo, excepcion) 
+        VALUES ('actualizarmantenimiento', ?)
+    ")->execute([$e->getMessage()]);
 
-echo json_encode([
-    "status" => "error",
-    "message" => "Error: ".$e->getMessage()
-]);
+    echo json_encode([
+        "status" => "error",
+        "message" => "Error: " . $e->getMessage()
+    ]);
 }
-

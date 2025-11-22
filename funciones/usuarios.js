@@ -8,7 +8,8 @@ const tabla = $('#tablaUsuarios').DataTable({
   columnDefs: [{ className: 'dtr-control', orderable: false, targets: 0 }],
   paging: true,
   info: true,
-  searching: false,
+  searching: true,
+  dom: 'lrtip',
   language: {
     url: "../funciones/datatable-es.js"  
   }

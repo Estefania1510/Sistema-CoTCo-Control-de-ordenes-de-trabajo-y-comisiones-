@@ -91,7 +91,23 @@ $puedeCambiarDiseñador = in_array($rol, ['administrador', 'encargado']);
   <div class="card mb-4">
     <div class="card-body">
       <h5 class="mb-3"><i class="fas fa-paint-brush me-2"></i> Descripción del Diseño</h5>
-      <textarea name="Descripcion" class="form-control" rows="3"><?= htmlspecialchars($orden['Descripcion']) ?></textarea>
+        <textarea name="Descripcion" class="form-control" rows="3"><?= htmlspecialchars($orden['Descripcion']) ?></textarea>
+        <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            document.querySelectorAll("textarea").forEach(t => {
+                t.style.overflowY = "hidden";
+                t.style.height = "auto";
+                t.style.height = t.scrollHeight + "px";
+            });
+        });
+
+        document.addEventListener("input", function (e) {
+            if (e.target.tagName.toLowerCase() === "textarea") {
+                e.target.style.height = "auto";
+                e.target.style.height = e.target.scrollHeight + "px";
+            }
+        });
+        </script>
     </div>
   </div>
 
@@ -260,6 +276,8 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   });
 });
+
+
 </script>
 
 

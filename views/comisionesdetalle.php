@@ -19,7 +19,7 @@ if (!$idUsuario) {
     </a>
 </div>
 
-  <!-- 🔹 Cuadros informativos -->
+  <!--Cuadros informativos -->
   <div class="row mb-4">
         <div class="col-md-4">
       <div class="card mb-4 border-0 shadow-sm" style="background-color:#e6f0ff; color:#003366; ">
@@ -46,7 +46,7 @@ if (!$idUsuario) {
       </div>
     </div>
   </div>
-  <!-- 🔹 Filtros -->
+  <!-- Filtros -->
   <div class="card shadow p-3 mb-4">
     <div class="row g-2">
       <div class="col-md-3">
@@ -63,6 +63,7 @@ if (!$idUsuario) {
           <option value="todas">Todas</option>
           <option value="Orden no Entregada">Orden no Entregada</option>
           <option value="Orden Entregada">Orden Entregada</option>
+          <option value="Orden Cancelada">Orden Cancelada</option>
           <option value="Pagado">Pagado</option>
         </select>
       </div>

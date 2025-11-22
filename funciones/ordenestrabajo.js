@@ -9,7 +9,7 @@ if (estadoURL) {
   // Rol actual del usuario
 const rolesUsuario = window.rolesUsuario || "";
 
-  const table = $('#tablaOrdenes').DataTable({
+const table = $('#tablaOrdenes').DataTable({
     ajax: {
       url: '../controllers/obtenerordenes.php',
       type: 'GET',
@@ -23,16 +23,16 @@ const rolesUsuario = window.rolesUsuario || "";
       },
       dataSrc: ''
     },
-    responsive: {
-      details: { type: 'column', target: 0 }
-    },
-    columnDefs: [{
-      className: 'dtr-control',
-      orderable: false,
-      targets: 0
-    }],
 
-      searching: false,
+    responsive: {
+        details: { type: 'column', target: 0 }
+    },
+
+    columnDefs: [
+        { className: 'dtr-control', orderable: true, targets: 0 }
+    ],
+
+    searching: false,
     language: { url: "../funciones/datatable-es.js" },
     columns: [
       { data: null, defaultContent: '' },
@@ -59,8 +59,6 @@ const rolesUsuario = window.rolesUsuario || "";
       { data: 'usuario' },
       {
         data: null,
-
-        //BOTONES
         render: function (row) {
           let botones = `
             <button class="btn btn-outline-primary btn-sm" data-ver="${row.folio}" title="Ver">
@@ -68,44 +66,38 @@ const rolesUsuario = window.rolesUsuario || "";
             </button>
           `;
 
-          // Botón de edición
           if (row.puedeEditar) {
             botones += `
               <button class="btn btn-outline-success btn-sm" data-edit="${row.folio}" data-tipo="${row.tipo}" title="Editar">
                 <i class="fas fa-pen"></i>
-              </button>
-            `;
+              </button>`;
           }
 
-          // Botón de ticket PDF
           botones += `
             <button class="btn btn-outline-danger btn-sm" data-ticket="${row.folio}" title="Descargar Ticket">
               <i class="fas fa-file-pdf"></i>
             </button>
           `;
 
-          // Agregar Licencia Software 
           const esAdmin = rolesUsuario.includes('administrador');
           if (esAdmin && row.tipo === "Mantenimiento" && row.tieneSoftware) {
             botones += `
               <button class="btn btn-outline-warning btn-sm" data-licencia="${row.folio}" title="Agregar Licencia Software">
-              <i class="fas fa-key"></i>
+                <i class="fas fa-key"></i>
               </button>
             `;
             if (row.tieneLicencia) {
-              botones += `
-                <i class="fas fa-thumbs-up text-secondary ms-1 " title="Licencias registradas"></i>
-              `;
+              botones += `<i class="fas fa-thumbs-up text-secondary ms-1 " title="Licencias registradas"></i>`;
             }
           }
 
           return botones;
         }
-
       }
     ],
     order: [1, 'desc']
-  });
+});
+
 
   if (estadoURL) {
   setTimeout(() => {

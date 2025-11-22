@@ -48,18 +48,31 @@ function cargarDetalle() {
 
       data.data.forEach((c) => {
         let color = "secondary";
-        if (c.estado === "Pagado") color = "success";
-        else if (c.estado === "Orden Entregada") color = "primary";
-
-        let botones = "";
-        if (window.__ROL_POWER__) {
-          if (c.estado === "Orden Entregada") {
-            botones = `<button class="btn btn-success btn-sm" onclick="pagar(${c.idComisiones})">Pagar</button>`;
-          } else if (c.estado === "Orden no Entregada") {
-            botones = `<button class="btn btn-warning btn-sm" onclick="adelantar(${c.idComisiones})">Adelantar</button>`;
-          }
+        if (c.estado === "Orden Cancelada") {
+            color = "danger";
+            c.monto = 0; 
+        } 
+        else if (c.estado === "Pagado") {
+            color = "success";
+        }
+        else if (c.estado === "Orden Entregada") {
+            color = "primary";
         }
 
+
+          let botones = "";
+          if (window.__ROL_POWER__) {
+            if (c.estado === "Orden Cancelada") {
+                botones = "";
+            }
+            else if (c.estado === "Orden Entregada") {
+                botones = `<button class="btn btn-success btn-sm" onclick="pagar(${c.idComisiones})">Pagar</button>`;
+            }
+            else if (c.estado === "Orden no Entregada") {
+                botones = `<button class="btn btn-warning btn-sm" onclick="adelantar(${c.idComisiones})">Adelantar</button>`;
+            }
+          }
+          
         let rutaNota = "";
         if (c.tipo === "Diseño") {
             rutaNota = `verdiseño.php?id=${c.folio}`;

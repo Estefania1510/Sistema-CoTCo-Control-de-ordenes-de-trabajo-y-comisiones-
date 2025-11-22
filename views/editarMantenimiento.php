@@ -124,6 +124,22 @@ $puedeCambiarTecnico = str_contains($rol, 'administrador') || str_contains($rol,
       <div class="col-md-4">
         <label class="form-label">Descripción del Equipo</label>
         <textarea name="descEquipo" class="form-control" rows="2"><?= htmlspecialchars($orden['DescripcionEquipo']) ?></textarea>
+        <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            document.querySelectorAll("textarea").forEach(t => {
+                t.style.overflowY = "hidden";
+                t.style.height = "auto";
+                t.style.height = t.scrollHeight + "px";
+            });
+        });
+
+        document.addEventListener("input", function (e) {
+            if (e.target.tagName.toLowerCase() === "textarea") {
+                e.target.style.height = "auto";
+                e.target.style.height = e.target.scrollHeight + "px";
+            }
+        });
+        </script>
       </div>
     </div>
   </div>

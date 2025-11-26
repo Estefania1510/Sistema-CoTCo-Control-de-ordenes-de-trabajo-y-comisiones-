@@ -61,7 +61,8 @@ const table = $('#tablaOrdenes').DataTable({
         data: null,
         render: function (row) {
           let botones = `
-            <button class="btn btn-outline-primary btn-sm" data-ver="${row.folio}" title="Ver">
+            <button class="btn btn-outline-primary btn-sm" data-ver="${row.folio}" data-tipo="${row.tipo}" title="Ver">
+
               <i class="fas fa-eye"></i>
             </button>
           `;
@@ -74,7 +75,7 @@ const table = $('#tablaOrdenes').DataTable({
           }
 
           botones += `
-            <button class="btn btn-outline-danger btn-sm" data-ticket="${row.folio}" title="Descargar Ticket">
+            <button class="btn btn-outline-danger btn-sm" data-ticket="${row.folio}" data-tipo="${row.tipo}" title="Descargar Ticket">
               <i class="fas fa-file-pdf"></i>
             </button>
           `;
@@ -133,7 +134,7 @@ $('#filtroEstado').on('change', function () {
   // VER ORDEN
   $(document).on("click", "[data-ver]", function () {
     const id = $(this).data("ver");
-    const tipo = $(this).closest("tr").find("td:nth-child(4)").text().trim().toLowerCase();
+    const tipo = $(this).data("tipo").toLowerCase();
 
     if (tipo === "diseño") {
       window.location.href = `verdiseño.php?id=${id}`;
@@ -145,7 +146,7 @@ $('#filtroEstado').on('change', function () {
   // TICKEY
 $(document).on("click", "[data-ticket]", function () {
   const id = $(this).data("ticket");
-  const tipo = $(this).closest("tr").find("td:nth-child(4)").text().trim().toLowerCase();
+  const tipo = $(this).data("tipo").toLowerCase();
 
   if (tipo === "diseño") {
 

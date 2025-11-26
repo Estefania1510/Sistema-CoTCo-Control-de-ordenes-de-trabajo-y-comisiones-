@@ -95,7 +95,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Eliminar fila de servicio 
 $('#tablaServicios tbody').on('click', '[data-del="row"]', function () {
-  if (rolUsuario !== 'administrador' && rolUsuario !== 'encargado') {
+  if (!rolUsuario.includes('administrador') && !rolUsuario.includes('encargado')) {
     Swal.fire({
       icon: "warning",
       title: "Acción no permitida",

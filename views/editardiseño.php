@@ -48,7 +48,7 @@ $idUsuario = $_SESSION['idUsuario'];
 $roles = $_SESSION['roles'] ?? [];
 $rol = implode(',', $roles); 
 $puedeEditar = in_array($rol, ['administrador', 'encargado']) || ($rol == 'diseñador' && $orden['idDiseñador'] == $idUsuario);
-$puedeCambiarDiseñador = in_array($rol, ['administrador', 'encargado']);
+$puedeCambiarDiseñador = in_array('administrador', $roles) || in_array('encargado', $roles);
 ?>
     <div class="d-flex justify-content-between align-items-end mt-2">
       <h1 class="mt-2 text-dark fw-bold mb-0">Editar Orden de Diseño</h1>

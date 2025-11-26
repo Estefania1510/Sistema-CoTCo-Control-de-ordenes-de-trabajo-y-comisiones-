@@ -29,7 +29,8 @@ document.getElementById('addRow').addEventListener('click', () => {
 
 // ELIMINAR FILA (solo admin o encargado)
 $('#tablaMateriales tbody').on('click', '[data-del="row"]', function () {
-  if (rolUsuario !== 'administrador' && rolUsuario !== 'encargado') {
+  if (!rolUsuario.includes('administrador') && !rolUsuario.includes('encargado'))
+ {
     Swal.fire({
       icon: "warning",
       title: "Acción no permitida",
@@ -157,8 +158,6 @@ $('#tablaMateriales tbody').on('click', '[data-del="row"]', function () {
           fechaEntregaInput.value = hoy;
         }
       });
-
-
   }
 
   // GUARDAR
@@ -221,7 +220,8 @@ $('#tablaMateriales tbody').on('click', '[data-del="row"]', function () {
 
   });
 
-    if (rolUsuario !== 'administrador' && rolUsuario !== 'encargado') {
+    if (!rolUsuario.includes('administrador') && !rolUsuario.includes('encargado'))
+   {
       document.querySelectorAll('[data-del="row"]').forEach(btn => {
         btn.style.display = 'none';
       });

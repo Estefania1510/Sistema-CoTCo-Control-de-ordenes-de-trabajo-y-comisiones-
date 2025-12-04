@@ -25,7 +25,7 @@
       </div>
     </div>
     <ol class="breadcrumb mb-4 mt-2">
-      <li class="breadcrumb-item active">Registro de pedido de diseño</li>
+      <li class="breadcrumb-item active">Registro de equipo y problema</li>
     </ol>
 
 <form id="formMantenimiento" method="POST">

@@ -28,8 +28,6 @@
     <ol class="breadcrumb mb-4 mt-2">
       <li class="breadcrumb-item active">Registro de pedido de diseño</li>
     </ol>
-
-
 <form id="formOrdenDiseno" method="POST">
 
   <!-- Cliente -->
@@ -125,9 +123,7 @@
       <input type="number" step="0.01" name="total" class="form-control" value="0.00" readonly>
     </div>
   </div>
-
   <div class="col-md-6 d-flex flex-column gap-3 align-items-end">
- 
     <div style="width: 100%;">
       <label class="form-label">Anticipo</label>
       <input type="number" step="0.01" name="anticipo" class="form-control" value="0.00">

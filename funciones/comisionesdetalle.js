@@ -117,12 +117,10 @@ function cargarDetalle() {
         order: [1, 'asc'],
         paging: true,
         searching: true,
-        info: false,
+        info: true,
         autoWidth: true,
         language: {
           url: "../funciones/datatable-es.js",
-          emptyTable: "No hay datos para mostrar",
-          infoEmpty: "Sin registros disponibles",
         },
       });
     })

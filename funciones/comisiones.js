@@ -108,16 +108,14 @@ function listarComisiones() {
         responsive: {
           details: { type: 'column', target: 0 },
         },
-        columnDefs: [{ className: 'dtr-control', orderable: false, targets: 0 }],
+        columnDefs: [{ className: 'dtr-control', orderable: true, targets: 0 }],
         order: [1, 'asc'],
-        paging: false,
+        paging: true,
         searching: true,
-        info: false,
+        info: true,
         autoWidth: false,
         language: {
           url: "../funciones/datatable-es.js",
-          emptyTable: "No hay datos para mostrar",
-          infoEmpty: "Sin registros disponibles",
         },
       });
     })

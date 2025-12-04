@@ -58,22 +58,15 @@ function initClientes() {
         responsive: {
           details: { type: 'column', target: 0 },
         },
-        columnDefs: [{ className: 'dtr-control', orderable: false, targets: 0 }],
+        columnDefs: [{ className: 'dtr-control', orderable: true, targets: 0 }],
         order: [[2, 'asc']], 
         paging: true,
         searching: true,      
         info: true,
-        autoWidth: false,
-        dom: 'rtip',          
+        autoWidth: true,
         language: { url: "../funciones/datatable-es.js" },
       });
 
-      const inputBuscar = document.getElementById("buscarCliente");
-      if (inputBuscar) {
-        inputBuscar.addEventListener("keyup", () => {
-          dt.search(inputBuscar.value).draw();
-        });
-      }
     })
     .catch((err) => {
       console.error("Error al cargar clientes:", err);

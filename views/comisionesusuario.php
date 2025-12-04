@@ -1,5 +1,4 @@
 <?php include 'includes/header.php'; ?>
-
 <div class="container-fluid mt-4">
   <h1 class="text-dark fw-bold mb-4">Mis Comisiones</h1>
 
@@ -31,8 +30,6 @@
     </div>
   </div>
 
-
-  <!-- Filtros -->
   <div class="card shadow p-3 mb-4">
     <div class="row g-2">
       <div class="col-md-3">

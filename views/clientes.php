@@ -2,16 +2,6 @@
 
 <div class="container-fluid mt-4">
   <h1 class="text-dark fw-bold mb-3">Clientes</h1>
-  <div class="card mb-3 shadow-sm">
-    <div class="card-body">
-      <div class="row g-3 align-items-center">
-        <div class="col-md-4">
-          <label class="form-label fw-bold">Buscar cliente</label>
-          <input type="text" id="buscarCliente" class="form-control" placeholder="Ej. Juan">
-        </div>
-      </div>
-    </div>
-  </div>
   <!-- Tabla de clientes -->
   <div class="card shadow-sm">
     <div class="card-body">

@@ -24,9 +24,7 @@ $(document).ready(function () {
       info: false,
       ordering: false,
       autoWidth: false,
-      language: {
-        emptyTable: "No hay datos para mostrar"
-      }
+      language: { url: "../funciones/datatable-es.js" }
     });
 
        function calcularCostos() {
@@ -201,6 +199,7 @@ $(document).ready(function () {
           }
       });
   });
+  
 
   //validacion precio
   $(document).on('input', 'input[name="precio[]"]', function () {

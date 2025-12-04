@@ -13,7 +13,7 @@ $desc=array (
 );
 $up=-63;
 $ut=44;
-$ttffile='C:\xampp\htdocs\PaginasWeb\Cotco\Librerias\tfpdf/font/unifont/DejaVuSans-Oblique.ttf';
+$ttffile='C:\xampp\htdocs\Cotco\Librerias\tfpdf/font/unifont/DejaVuSans-Oblique.ttf';
 $originalsize=635416;
 $fontkey='dejavuI';
 ?>

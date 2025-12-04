@@ -77,6 +77,7 @@ try {
         WHERE n.idNota = ?
         LIMIT 1
     ";
+
     $stmtTot = $conn->prepare($sqlTotal);
     $stmtTot->execute([$idNota]);
     $totales = $stmtTot->fetch(PDO::FETCH_ASSOC);
@@ -139,7 +140,6 @@ try {
 
         $idComision = $conn->lastInsertId();
     }
-
 
     if ($idComision) {
 

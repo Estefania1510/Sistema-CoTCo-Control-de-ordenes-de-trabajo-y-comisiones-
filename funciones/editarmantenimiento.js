@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     },
     columnDefs: [
-      { className: 'control', orderable: false, targets: 0 },
+      { className: 'dtr-control', orderable: false, targets: 0 },
       { orderable: false, targets: [1, 2, 3, 4] }
     ],
     paging: false,
@@ -16,7 +16,7 @@ document.addEventListener("DOMContentLoaded", () => {
     info: false,
     ordering: false,
     autoWidth: false,
-    language: { emptyTable: "No hay servicios registrados" }
+    language: { url: "../funciones/datatable-es.js" }
   });
 
   // Cargar Tipos de Servicio 

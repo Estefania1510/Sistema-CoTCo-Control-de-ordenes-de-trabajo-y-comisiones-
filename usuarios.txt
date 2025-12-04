@@ -1,8 +1,10 @@
 usuarios
 
-claudia
+claudia 
 alexia
 chema
+norma
+estefania
 
 contraseña para todos los usuarios
 

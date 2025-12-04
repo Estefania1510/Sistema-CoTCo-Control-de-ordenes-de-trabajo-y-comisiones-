@@ -10,7 +10,6 @@ if (!isset($_SESSION['idUsuario'])) {
 
 $isAdmin = in_array('administrador', $_SESSION['roles'] ?? []);
 
-
 if ($isAdmin) {
   require __DIR__ . '/comisionesadmin.php';
 } else {

@@ -23,11 +23,9 @@ const table = $('#tablaOrdenes').DataTable({
       },
       dataSrc: ''
     },
-
     responsive: {
         details: { type: 'column', target: 0 }
     },
-
     columnDefs: [
         { className: 'dtr-control', orderable: true, targets: 0 }
     ],

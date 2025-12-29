@@ -83,10 +83,12 @@ $isTecnico   = in_array("tecnico", $rolesUsuario);
             Órdenes de Trabajo
           </a>
 
+          <?php if ($isAdmin || $isDisenador || $isTecnico ): ?>
           <a class="nav-link" href="comisiones.php">
             <div class="sb-nav-link-icon"><i class="fas fa-dollar-sign" style="color: #ffffff;" ></i></div>
             Comisiones
           </a>
+          <?php endif; ?>
 
           <!-- SOLO ADMIN + ENCARGADO -->
           <?php if ($isAdmin || $isEncargado): ?>

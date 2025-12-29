@@ -3,27 +3,30 @@
   <h1 class="text-dark fw-bold mb-4">Mis Comisiones</h1>
 
   <!--Cuadros informativos -->
+
   <div class="row mb-4">
-        <div class="col-md-4">
-      <div class="card mb-4 border-0 shadow-sm" style="background-color:#e6f0ff; color:#003366; ">
-        <div class="card-body">
-          <h5 class="card-title">Total de Notas Entregadas</h5>
-          <h3 id="totalEntregadas">$0.00</h3>
-        </div>
-      </div>
-    </div>
     <div class="col-md-4">
       <div class="card mb-4 border-0 shadow-sm" style="background-color:#fff8bd; color:#e2b808; ">
         <div class="card-body">
-          <h5 class="card-title">Pendientes</h5>
+          <h5 class="card-title">Comisión Órdenes NO Entregadas</h5>
           <h3 id="totalPendientes">$0.00</h3>
         </div>
       </div>
     </div>
+
+        <div class="col-md-4">
+      <div class="card mb-4 border-0 shadow-sm" style="background-color:#e6f0ff; color:#003366; ">
+        <div class="card-body">
+          <h5 class="card-title">Comisión Órdenes Entregadas</h5>
+          <h3 id="totalEntregadas">$0.00</h3>
+        </div>
+      </div>
+    </div>
+
     <div class="col-md-4">
       <div class="card mb-4 border-0 shadow-sm" style="background-color:#e6ffee; color:#004d26; ">
         <div class="card-body">
-          <h5 class="card-title">Pagadas</h5>
+          <h5 class="card-title">Comisión Pagada</h5>
           <h3 id="totalPagadas">$0.00</h3>
         </div>
       </div>
@@ -70,6 +73,7 @@
           <th>Monto</th>
           <th>Fecha de pago</th>
           <th>Estado</th>
+          <th>Acción</th>
         </tr>
       </thead>
       <tbody></tbody>

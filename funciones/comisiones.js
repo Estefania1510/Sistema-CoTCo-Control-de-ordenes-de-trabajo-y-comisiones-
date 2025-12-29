@@ -185,6 +185,19 @@ function cargarDetalle() {
             acciones = `<button class="btn btn-warning btn-sm" onclick="adelantar(${c.idComisiones})">Adelantar</button>`;
         }
 
+        let rutaNota = "";
+        if (c.tipo === "Diseño") {
+            rutaNota = `verdiseño.php?id=${c.folio}`;
+        } else if (c.tipo === "Mantenimiento") {
+            rutaNota = `vermantenimiento.php?id=${c.folio}`;
+        }
+        
+          let btnVerNota = `
+          <a class="btn btn-outline-primary btn-sm" href="${rutaNota}" title="Ver Nota">
+            <i class="fas fa-eye"></i>
+          </a>
+          `;
+
         tbody.innerHTML += `
           <tr>
           <td></td>
@@ -197,6 +210,7 @@ function cargarDetalle() {
             <td>${c.fechapago ? c.fechapago : 'Sin pagar'}</td>
             <td><span class="badge bg-${color}">${c.estado}</span></td>
             ${window.__ROL_POWER__ ? `<td>${acciones}</td>` : ""}
+             <td> ${btnVerNota} </td>
           </tr>`;
       });
 

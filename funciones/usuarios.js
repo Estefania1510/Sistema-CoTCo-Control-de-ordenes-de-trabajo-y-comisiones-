@@ -22,7 +22,7 @@ const tabla = $('#tablaUsuarios').DataTable({
 
   // Filtrar por rol
   $('#filtroRol').on('change', function () {
-    tabla.column(3).search(this.value).draw();
+    tabla.column(4).search(this.value).draw();
   });
 
   // Agregar nuevo usuario
@@ -30,6 +30,7 @@ const tabla = $('#tablaUsuarios').DataTable({
     $('#tituloModal').text('Agregar Usuario');
     $('#formUsuario')[0].reset();
     $('#idUsuario').val('');
+    $('#FechaNacimiento').val('');
     $('#Rol').val([]).trigger('change');
     $('#modalUsuario').modal('show');
   });
@@ -53,6 +54,7 @@ $(document).on('click', '.editarUsuario', function () {
       $('#idUsuario').val(data.idUsuario);
       $('#NombreUsuario').val(data.NombreUsuario);
       $('#Usuario').val(data.Usuario);
+      $('#FechaNacimiento').val(data.FechaNacimiento || '');
       $('#Contraseña').val('');
 
       $('input[name="Rol[]"]').prop('checked', false);

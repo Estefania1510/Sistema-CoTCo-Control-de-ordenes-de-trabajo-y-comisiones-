@@ -2,10 +2,17 @@
 require_once __DIR__ . '/../config/Conexion.php';
 require_once __DIR__ . '/../config/ConnectData.php';
 session_start();
+require_once __DIR__ . '/../config/session_control.php';
 
 // === Validar rol administrador ===
-if (!in_array('administrador', $_SESSION['roles'] ?? [])) {
-  echo json_encode(["status" => "error", "message" => "No tienes permisos para registrar licencias."]);
+$roles = $_SESSION['roles'] ?? [];
+$rolesPermitidos = ['administrador', 'tecnico'];
+
+if (empty(array_intersect($rolesPermitidos, $roles))) {
+  echo json_encode([
+    "status" => "error",
+    "message" => "No tienes permisos para registrar licencias."
+  ]);
   exit;
 }
 

@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once __DIR__ . '/../config/session_control.php';
 require_once __DIR__ . '/../config/Conexion.php';
 require_once __DIR__ . '/../config/ConnectData.php';
 
@@ -19,6 +20,7 @@ $OrdenesTrabajadas = $_GET['OrdenesTrabajadas'] ?? 0;
 $query = "SELECT 
             n.idNota AS folio,
             c.NombreCliente AS cliente,
+            n.Trabajo AS trabajo,
             IF(nd.idDiseño IS NOT NULL, 'Diseño', 'Mantenimiento') AS tipo,
             DATE_FORMAT (n.FechaRecepcion, '%d-%m-%Y') AS fechaRecepcion,
             IFNULL(NULLIF(DATE_FORMAT(n.FechaEntrega, '%d-%m-%Y'), ''), 'Pendiente') AS fechaEntrega,
@@ -41,9 +43,13 @@ $query = "SELECT
           WHERE 1=1";
 
 if ($nombre !== '') {
-  // Buscar por cliente o por folio
-  $query .= " AND (c.NombreCliente LIKE :nombre OR CAST(n.idNota AS CHAR) LIKE :folio)";
+  $query .= " AND (
+      c.NombreCliente LIKE :busqueda
+      OR CAST(n.idNota AS CHAR) LIKE :busquedaFolio
+      OR n.Trabajo LIKE :busquedaTrabajo
+  )";
 }
+
 if ($estado !== '') {
   $query .= " AND (nd.estatus = :estado OR nm.Estatus = :estado)";
 }
@@ -66,9 +72,12 @@ $stmt = $conn->prepare($query);
 
 
 if ($nombre !== '') {
-  $stmt->bindValue(':nombre', "%$nombre%");
-  $stmt->bindValue(':folio',  "%$nombre%");
+  $like = "%$nombre%";
+  $stmt->bindValue(':busqueda', $like);
+  $stmt->bindValue(':busquedaFolio', $like);
+  $stmt->bindValue(':busquedaTrabajo', $like);
 }
+
 if ($estado !== '') { $stmt->bindValue(':estado', $estado); }
 if ($fecha  !== '') { $stmt->bindValue(':fecha',  $fecha);  }
 

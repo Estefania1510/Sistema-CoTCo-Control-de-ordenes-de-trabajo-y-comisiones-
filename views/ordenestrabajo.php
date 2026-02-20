@@ -15,6 +15,7 @@ $rol = $roles[0] ?? '';
 
 <div class="container-fluid mt-4">
 
+
   <!-- Encabezado superior -->
   <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
     <h1 class="mt-4 text-dark fw-bold">Órdenes de Trabajo</h1>
@@ -26,7 +27,7 @@ $rol = $roles[0] ?? '';
         </a>
         <a href="diseñoorden.php" class="btn btn-outline-success btn-lg">
           <i class="fas fa-paint-brush me-2"></i> DISEÑO
-        </a>
+        </a>  
       </div>
     </div>
   </div>
@@ -35,21 +36,24 @@ $rol = $roles[0] ?? '';
   <div class="card shadow-sm mb-4">
     <div class="card-body row g-3 align-items-end">
       <div class="col-md-3">
-        <label class="form-label">Nombre del Cliente o Folio</label>
-        <input type="text" id="filtroNombre" class="form-control" placeholder="Buscar cliente o folio...">
+        <label class="form-label">Buscar</label>
+        <input type="text" id="filtroNombre" class="form-control" placeholder="cliente, folio o trabajo...">
       </div>
       <div class="col-md-2">
         <label class="form-label">Estado</label>
+
         <select id="filtroEstado" class="form-select">
           <option value="">Todos</option>
           <option value="Proceso">Proceso</option>
           <option value="Espera">Espera</option>
-          <option value="EnviadoTequila">EnviadoTequila</option>
-          <option value="Avisado">Avisado</option>
+          <option value="Enviado a Tequila">Enviado a Tequila</option>
+          <option value="Listo para Entrega">Listo para Entregar</option>
+          <option value="Cliente Avisado">Cliente Avisado</option>
           <option value="Entregado">Entregado</option>
           <option value="Cancelado">Cancelado</option>
           <option value="Retrasado">Retrasado</option>
         </select>
+        
       </div>
       <div class="col-md-2">
         <label class="form-label">Tipo</label>
@@ -89,6 +93,7 @@ $rol = $roles[0] ?? '';
             <th></th>
             <th>Folio</th>
             <th>Cliente</th>
+            <th>Trabajo</th>
             <th>Tipo</th>
             <th>Fecha Recepción</th>
             <th>Fecha Entrega</th>
@@ -115,4 +120,11 @@ $rol = $roles[0] ?? '';
 </script>
 
 <script src="../funciones/ordenestrabajo.js"></script>
+
+<style>
+  #tablaOrdenes{
+    width: 100% !important;
+  }
+</style>
+
 <?php include 'includes/footer.php'; ?>

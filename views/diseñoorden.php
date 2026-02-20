@@ -56,6 +56,18 @@
     </div>
   </div>
 
+      <!-- Trabajo -->
+    <div class="card mb-4">
+      <div class="card-body">
+        <h5 class="mb-3"><i class="fas fa-tag me-2"></i> Trabajo</h5>
+        <label class="form-label">Trabajo</label>
+        <input type="text" name="trabajo" class="form-control" maxlength="120"
+               required>
+        <small class="text-muted">Descripción corta para identificar rápido la orden.</small>
+      </div>
+    </div>
+
+
   <!-- Descripción diseño -->
   <div class="card mb-4">
     <div class="card-body">
@@ -80,8 +92,39 @@
     </div>
   </div>
 
+  <!-- TIPO DE DISEÑO -->
+<div class="card mb-4">
+  <div class="card-body row g-3">
+    <h5 class="mb-3"><i class="fas fa-globe me-2"></i> Tipo de Diseño</h5>
+
+    <div class="col-md-12">
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="esDigital" name="esDigital">
+        <label class="form-check-label fw-semibold" for="esDigital">
+          Diseño digital
+        </label>
+      </div>
+    </div>
+
+    <div id="bloqueEntrega" class="row g-3 mt-1" style="display:none;">
+      <div class="col-md-4">
+        <label class="form-label">Medio de entrega</label>
+        <select class="form-select" name="medioEntrega" id="medioEntrega">
+          <option value="">Selecciona</option>
+          <option value="WhatsApp">WhatsApp</option>
+          <option value="Correo">Correo</option>
+          <option value="Drive">Drive</option>
+          <option value="Otro">Otro</option>
+        </select>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
   <!-- Materiales -->
-  <div class="card mb-4">
+  <div class="card mb-4" id="cardMateriales">
     <div class="card-body">
       <h5 class="mb-3"><i class="fas fa-boxes me-2"></i> Material</h5>
       <table class="table table-bordered display nowrap tabla-responsiva" id="tablaMateriales" style="width:100%">
@@ -138,7 +181,7 @@
       <input type="text" name="comentarios" class="form-control">
     </div>
   </div>
-      <div class="col-md-12">
+       <div class="col-md-12">
         <div class="form-check">
           <input class="form-check-input" type="checkbox" name="cotPendiente" id="cotPendiente">
           <label class="form-check-label form-check-label fw-semibold text-danger" for="cotPendiente">Cotización pendiente</label>
@@ -146,7 +189,7 @@
         <div id="msgPendiente" class="text-muted mt-1 " style="display:none; font-size: 0.9em;">
                Los importes se llenarán cuando se haga la cotización.
       </div>
-      </div>
+      </div> 
     </div>
   </div>
 
@@ -160,7 +203,7 @@
       <div class="col-md-6">
         <label class="form-label">Diseñador</label>
       <select name="idDiseñador" class="form-select">
-        <option value="">En espera</option>
+        <option value="">Diseñador no asignado</option>
         <?php foreach ($diseñadores as $d): ?>
           <option value="<?= $d['idUsuario'] ?>"><?= htmlspecialchars($d['NombreUsuario']) ?></option>
         <?php endforeach; ?>
@@ -178,8 +221,11 @@
     </button>
 </div>
 
+
   <!-- ALERTAS -->
   <script src="../funciones/alertas.js"></script>
+  <script src="../funciones/diseñoorden.js"></script>
+  <script src="../funciones/whatsappFlow.js?v=3"></script>
 
   <script>
   document.getElementById("formOrdenDiseno").addEventListener("submit", async (e) => {
@@ -196,26 +242,43 @@
       });
       const data = await res.json();
 
-      if (data.status === "success") {
-        alertaGuardadoExito(data.folio);
-        e.target.reset();
+    if (data.status === "success") {
 
-        //Actualizar el folio automáticamente
-        $.ajax({
-          url: "../controllers/obtenerFolio.php",
-          method: "GET",
-          dataType: "json",
-          success: function (data) {
-            $("#folio").text(data.folio);
-          }
-        });
-        setTimeout(() => {
-          window.open(`../controllers/TicketDiseno.php?idNota=${data.folio}`, '_blank');
-        }, 1600);
-      }
-       else {
-        alertaError(data.message);
-      }
+      const idNota = data.folio; // tu backend devuelve "folio" como idNota
+
+      // IMPORTANTÍSIMO: tomar teléfonos ANTES del reset
+      const tel1Raw = ($("#telefono").val() || "").trim();
+      const tel2Raw = ($("#telefono2").val() || "").trim();
+
+      // Abre el modal con acciones (IMPRIMIR / WHATSAPP)
+      await flujoGuardadoConAcciones({
+        idNota,
+        tel1Raw,
+        tel2Raw,
+        ticketUrl: `../controllers/TicketDiseno.php?idNota=${idNota}`,
+        // OJO: este endpoint debe existir y devolver JSON con {status:"success", mensaje:"..."}
+        whatsEndpointUrl: `../controllers/WhatsAppTicketDiseno.php`
+      });
+
+      // Ya luego limpias
+      e.target.reset();
+
+      // (si usas DataTable en materiales, aquí también límpiala si aplica)
+
+      // Folio nuevo
+      $.ajax({
+        url: "../controllers/obtenerFolio.php",
+        method: "GET",
+        dataType: "json",
+        success: function (data) {
+          $("#folio").text(data.folio);
+        }
+      });
+
+    } else {
+      alertaError(data.message);
+    }
+
     } catch (err) {
       alertaError(err.message);
     }
@@ -225,5 +288,5 @@
   </div>
 </form>
 <?php include 'includes/footer.php'; ?>
-<script src="../funciones/diseñoorden.js"></script>
+
 

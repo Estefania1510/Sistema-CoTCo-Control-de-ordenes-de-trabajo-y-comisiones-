@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../config/Conexion.php';
 require_once __DIR__ . '/../config/ConnectData.php';
 session_start();
+require_once __DIR__ . '/../config/session_control.php';
 
 $conexion = new Conexion($conData);
 $conn = $conexion->getConnection();
@@ -12,6 +13,12 @@ $estatus = $_POST['estatus'] ?? '';
 $costo = $_POST['diseño'] ?? 0;
 $anticipo = $_POST['anticipo'] ?? 0;
 $comentario = trim($_POST['comentarios'] ?? '');
+$trabajo = trim($_POST['trabajo'] ?? '');
+
+$esDigital = isset($_POST['esDigital']) ? 1 : 0;
+$medioEntrega = trim($_POST['medioEntrega'] ?? '');
+$medioEntrega = ($esDigital === 1 && $medioEntrega !== '') ? $medioEntrega : null;
+
 $descripcion = trim($_POST['Descripcion'] ?? '');
 $fechaEntrega = !empty($_POST['FechaEntrega']) ? $_POST['FechaEntrega'] : null;
 $idDiseñador = $_POST['idDiseñador'] ?? null;
@@ -30,21 +37,30 @@ try {
 
     $stmt1 = $conn->prepare("
         UPDATE nota 
-        SET Descripcion=?, Comentario=?, Anticipo=?, FechaEntrega=? 
+        SET Trabajo=?, Descripcion=?, Comentario=?, Anticipo=?, FechaEntrega=? 
         WHERE idNota=?
+
     ");
-    $stmt1->execute([$descripcion, $comentario, $anticipo, $fechaEntrega, $idNota]);
+   $stmt1->execute([$trabajo, $descripcion, $comentario, $anticipo, $fechaEntrega, $idNota]);
+   
 
     $stmt2 = $conn->prepare("
         UPDATE notadiseño 
-        SET estatus=?, CostoDiseño=?, idDiseñador=? 
+        SET estatus=?, CostoDiseño=?, EsDigital=?, MedioEntrega=?, idDiseñador=? 
         WHERE idDiseño=?
     ");
+
     $stmt2->bindValue(1, $estatus);
     $stmt2->bindValue(2, $costo);
-    $stmt2->bindValue(3, $idDiseñador, is_null($idDiseñador) ? PDO::PARAM_NULL : PDO::PARAM_INT);
-    $stmt2->bindValue(4, $idDiseño, PDO::PARAM_INT);
+    $stmt2->bindValue(3, $esDigital, PDO::PARAM_INT);
+
+    // MedioEntrega puede ser NULL
+    $stmt2->bindValue(4, $medioEntrega, is_null($medioEntrega) ? PDO::PARAM_NULL : PDO::PARAM_STR);
+
+    $stmt2->bindValue(5, $idDiseñador, is_null($idDiseñador) ? PDO::PARAM_NULL : PDO::PARAM_INT);
+    $stmt2->bindValue(6, $idDiseño, PDO::PARAM_INT);
     $stmt2->execute();
+
 
     $conn->prepare("DELETE FROM material WHERE idDiseño=?")
          ->execute([$idDiseño]);

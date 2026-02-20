@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../config/Conexion.php';
 require_once __DIR__ . '/../config/ConnectData.php';
 session_start();
+require_once __DIR__ . '/../config/session_control.php';
 
 $conexion = new Conexion($conData);
 $conn = $conexion->getConnection();
@@ -12,6 +13,7 @@ $estatus = $_POST['estatus'] ?? '';
 $fechaEntrega = !empty($_POST['FechaEntrega']) ? $_POST['FechaEntrega'] : null;
 $idTecnico = $_POST['idTecnico'] ?? null;
 
+$trabajo = trim($_POST['trabajo'] ?? '');
 $equipo = trim($_POST['equipo'] ?? '');
 $marca = trim($_POST['marca'] ?? '');
 $modelo = trim($_POST['modelo'] ?? '');
@@ -27,15 +29,18 @@ $resto = floatval($_POST['resto'] ?? 0);
 $tipos = $_POST['tipo'] ?? [];
 $servicios = $_POST['servicio'] ?? [];
 $precios = $_POST['precio'] ?? [];
+$cantidades = $_POST['cantidad'] ?? [];
+$origenes = $_POST['origen'] ?? [];
 
 try {
     $conn->beginTransaction();
     $stmtN = $conn->prepare("
         UPDATE nota
-        SET Descripcion = ?, Comentario = ?, Total = ?, Anticipo = ?, Resto = ?, FechaEntrega = ?
+        SET Trabajo = ?, Descripcion = ?, Comentario = ?, Total = ?, Anticipo = ?, Resto = ?, FechaEntrega = ?
         WHERE idNota = ?
     ");
     $stmtN->execute([
+        $trabajo,
         $descProblema,
         $sugerencia,
         $total,
@@ -58,22 +63,58 @@ try {
         $idMantenimiento
     ]);
 
+
     $conn->prepare("DELETE FROM auxservicios WHERE idMantenimiento = ?")
          ->execute([$idMantenimiento]);
 
-    $stmtServ = $conn->prepare("
-        INSERT INTO auxservicios (idMantenimiento, idCatalogoMnt, Precio)
-        VALUES (?, (SELECT idCatalogoMnt FROM catalogomnt WHERE Servicio=? LIMIT 1), ?)
+    $stmtCatalogo = $conn->prepare("
+      SELECT c.idCatalogoMnt
+      FROM catalogomnt c
+      INNER JOIN tipomantenimiento t ON c.idTipoMnt = t.idTipoMnt
+      WHERE t.NombreTipo = :tipo AND c.Servicio = :servicio
+      LIMIT 1
     ");
 
-    for ($i = 0; $i < count($servicios); $i++) {
-        $serv = trim($servicios[$i]);
-        $precio = floatval($precios[$i] ?? 0);
+    $stmtIns = $conn->prepare("
+      INSERT INTO auxservicios (idMantenimiento, idCatalogoMnt, Descripcion, Cantidad, Precio, Subtotal, Origen)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    ");
 
-        if ($serv !== "") {
-            $stmtServ->execute([$idMantenimiento, $serv, $precio]);
+    $max = count($servicios);
+
+    for ($i = 0; $i < $max; $i++) {
+
+      $origen = trim(($origenes[$i] ?? 'CATALOGO'));
+      $tipo   = trim(($tipos[$i] ?? ''));
+      $desc   = trim(($servicios[$i] ?? ''));
+
+      $precioStr = str_replace(',', '.', (string)($precios[$i] ?? '0'));
+      $precio = floatval($precioStr);
+
+      $cant = intval($cantidades[$i] ?? 1);
+      if ($cant <= 0) $cant = 1;
+
+      if ($desc === '') continue;
+
+      $subtotal = $cant * $precio;
+
+      if ($origen === 'MANUAL') {
+        // MANUAL: idCatalogoMnt NULL
+        $stmtIns->execute([$idMantenimiento, null, $desc, $cant, $precio, $subtotal, 'MANUAL']);
+      } else {
+        // CATALOGO: requiere tipo + servicio
+        if ($tipo === '') continue;
+
+        $stmtCatalogo->execute([':tipo' => $tipo, ':servicio' => $desc]);
+        $idCat = $stmtCatalogo->fetchColumn();
+
+        if ($idCat) {
+          $stmtIns->execute([$idMantenimiento, $idCat, $desc, $cant, $precio, $subtotal, 'CATALOGO']);
         }
+      }
     }
+
+
 
     $stmtC = $conn->prepare("
         SELECT idComisiones FROM comisiones
@@ -88,6 +129,8 @@ try {
         $stmtPor = $conn->prepare("
             SELECT valor FROM configcomision WHERE nombreajuste = 'porcentaje'
         ");
+
+
         $stmtPor->execute();
         $porcentaje = (float)$stmtPor->fetchColumn() ?: 30;
         $montoInicial = ($total * $porcentaje) / 100;

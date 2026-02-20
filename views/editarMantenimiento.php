@@ -9,7 +9,7 @@ $conn = $conexion->getConnection();
 $idNota = $_GET['id'] ?? null;
 
 $sql = "SELECT 
-          n.idNota, n.FechaRecepcion, n.FechaEntrega, n.Total, n.Anticipo, n.Resto, 
+          n.idNota, n.Trabajo, n.FechaRecepcion, n.FechaEntrega, n.Total, n.Anticipo, n.Resto, 
           n.Descripcion AS DescProblema, n.Comentario AS Sugerencia,
           c.NombreCliente, c.Telefono, c.Telefono2, c.Direccion,
           u.NombreUsuario AS RecepcionadoPor,
@@ -40,12 +40,23 @@ $stmt2 = $conn->prepare($sql2);
 $stmt2->execute();
 $tecnicos = $stmt2->fetchAll(PDO::FETCH_ASSOC);
 
-// Servicios del catálogo asociados
-$sql3 = "SELECT t.NombreTipo, c.Servicio, a.Precio
-         FROM auxservicios a
-         INNER JOIN catalogomnt c ON a.idCatalogoMnt = c.idCatalogoMnt
-         INNER JOIN tipomantenimiento t ON c.idTipoMnt = t.idTipoMnt
-         WHERE a.idMantenimiento = ?";
+
+// Servicios (CATÁLOGO + MANUAL) asociados
+$sql3 = "
+  SELECT
+    a.Origen,
+    a.idCatalogoMnt,
+    a.Descripcion,
+    a.Cantidad,
+    a.Precio,
+    a.Subtotal,
+    t.NombreTipo
+  FROM auxservicios a
+  LEFT JOIN catalogomnt c ON a.idCatalogoMnt = c.idCatalogoMnt
+  LEFT JOIN tipomantenimiento t ON c.idTipoMnt = t.idTipoMnt
+  WHERE a.idMantenimiento = ?
+  ORDER BY a.idAuxServicios ASC
+";
 $stmt3 = $conn->prepare($sql3);
 $stmt3->execute([$orden['idMantenimiento']]);
 $servicios = $stmt3->fetchAll(PDO::FETCH_ASSOC);
@@ -54,8 +65,7 @@ $servicios = $stmt3->fetchAll(PDO::FETCH_ASSOC);
 $idUsuario = $_SESSION['idUsuario'];
 $roles = $_SESSION['roles'] ?? [];
 $rol = implode(',', $roles);
-$puedeEditar = str_contains($rol, 'administrador') || str_contains($rol, 'encargado') ||
-               (str_contains($rol, 'tecnico') && $orden['idTecnico'] == $idUsuario);
+$puedeEditar = true;
 $puedeCambiarTecnico = str_contains($rol, 'administrador') || str_contains($rol, 'encargado');
 ?>
 
@@ -72,6 +82,20 @@ $puedeCambiarTecnico = str_contains($rol, 'administrador') || str_contains($rol,
   <input type="hidden" name="idNota" value="<?= $orden['idNota'] ?>">
   <input type="hidden" name="idMantenimiento" value="<?= $orden['idMantenimiento'] ?>">
   <input type="hidden" name="idTecnicoOriginal" value="<?= $orden['idTecnico'] ?>">
+  <input type="hidden" id="wa_cliente" value="<?= htmlspecialchars($orden['NombreCliente'] ?? '') ?>">
+  <input type="hidden" id="wa_tel1" value="<?= htmlspecialchars($orden['Telefono'] ?? '') ?>">
+  <input type="hidden" id="wa_tel2" value="<?= htmlspecialchars($orden['Telefono2'] ?? '') ?>">
+
+    <!-- Botones para Whats -->
+  <div class="d-flex justify-content-end gap-2 mb-3 flex-wrap">
+    <button type="button" class="btn btn-success btn-lg fw-bold px-4" id="btnWhatsAvisar">
+      <i class="fa-brands fa-whatsapp me-2"></i> Avisar por WhatsApp
+    </button>
+
+    <button type="button" class="btn btn-outline-success btn-lg fw-bold px-4" id="btnWhatsChat">
+      <i class="fa-brands fa-whatsapp me-2"></i> Abrir chat
+    </button>
+  </div>
 
 
   <!-- Cliente -->
@@ -80,22 +104,34 @@ $puedeCambiarTecnico = str_contains($rol, 'administrador') || str_contains($rol,
       <h5 class="mb-3"><i class="fas fa-user me-2"></i> Datos del Cliente</h5>
       <div class="col-md-6">
         <label class="form-label">Nombre del Cliente</label>
-        <input type="text" value="<?= htmlspecialchars($orden['NombreCliente']) ?>" class="form-control" readonly>
+        <input type="text" value="<?= htmlspecialchars($orden['NombreCliente']) ?>" class="form-control" disabled>
       </div>
       <div class="col-md-3">
         <label class="form-label">Teléfono</label>
-        <input type="text" value="<?= htmlspecialchars($orden['Telefono']) ?>" class="form-control" readonly>
+        <input type="text" value="<?= htmlspecialchars($orden['Telefono']) ?>" class="form-control" disabled>
       </div>
       <div class="col-md-3">
         <label class="form-label">Teléfono 2</label>
-        <input type="text" value="<?= htmlspecialchars($orden['Telefono2']) ?>" class="form-control" readonly>
+        <input type="text" value="<?= htmlspecialchars($orden['Telefono2']) ?>" class="form-control" disabled>
       </div>
       <div class="col-md-12">
         <label class="form-label">Dirección</label>
-        <input type="text" value="<?= htmlspecialchars($orden['Direccion']) ?>" class="form-control" readonly>
+        <input type="text" value="<?= htmlspecialchars($orden['Direccion']) ?>" class="form-control" disabled>
       </div>
     </div>
   </div>
+
+      <!-- Trabajo -->
+    <div class="card mb-4">
+      <div class="card-body">
+        <h5 class="mb-3"><i class="fas fa-tag me-2"></i> Trabajo</h5>
+        <label class="form-label">Trabajo</label>
+        <input type="text" name="trabajo" class="form-control"
+               value="<?= htmlspecialchars($orden['Trabajo'] ?? '') ?>"
+               maxlength="120" required>
+      </div>
+    </div>
+
 
   <!-- Datos del Equipo -->
   <div class="card mb-4">
@@ -182,54 +218,83 @@ $puedeCambiarTecnico = str_contains($rol, 'administrador') || str_contains($rol,
         </button>
       </div>
 
+ <!-- SERVICIO MANUAL -->
+      <div class="col-md-12 mt-3">
+  <h6 class="fw-bold mb-2">Agregar servicio manual</h6>
+  <div class="row g-3 align-items-end">
+    <div class="col-md-10">
+      <label class="form-label fw-bold">Concepto</label>
+      <input type="text" id="servicioManual" class="form-control"
+             placeholder="Ej: Disco duro 1TB / RAM 16GB / Mano de obra">
+    </div>
+    <div class="col-md-2">
+      <button type="button" id="btnAgregarManual" class="btn btn-outline-primary btn-sm w-100">
+        Agregar manual
+      </button>
+    </div>
+  </div>
+</div>
+
+
 
   <?php endif; ?>
 
   <!-- Tabla de servicios -->
-      <table class="table table-bordered display nowrap" id="tablaServicios" style="width:100%">
-        <thead class="table-light">
-          <tr>
-            <th></th>
-            <th>Tipo</th>
-            <th>Servicio</th>
-            <th>Precio</th>
-            <th>Acción</th>
-          </tr>
-        </thead>
+<table class="table table-bordered display nowrap" id="tablaServicios" style="width:100%">
+  <thead class="table-light">
+    <tr>
+      <th></th>
+      <th>Tipo</th>
+      <th>Servicio</th>
+      <th>Cantidad</th>
+      <th>Precio</th>
+      <th>Acción</th>
+    </tr>
+  </thead>
 
-          <tbody>
-            <?php 
-            $bloquearCampos = !(
-              str_contains($rol, 'administrador') || 
-              str_contains($rol, 'encargado')
-            );
-            ?>
+  <tbody>
+    <?php foreach ($servicios as $s): ?>
+      <?php
+        $origen = $s['Origen'] ?? 'CATALOGO';
+        $esManual = ($origen === 'MANUAL');
+        $tipoMostrar = $esManual ? 'Manual' : ($s['NombreTipo'] ?? '');
+      ?>
+      <tr>
+        <td></td>
 
-            <?php foreach ($servicios as $s): ?>
-              <tr>
-                <td></td>
-                <td>
-                  <input type="text" name="tipo[]" class="form-control" 
-                         value="<?= htmlspecialchars($s['NombreTipo']) ?>" readonly>
-                </td>
-                <td>
-                  <input type="text" name="servicio[]" class="form-control" 
-                         value="<?= htmlspecialchars($s['Servicio']) ?>" readonly>
-                </td>
-                <td>
-                  <input type="number" step="0.01" name="precio[]" class="form-control" 
-                         value="<?= $s['Precio'] ?>" <?= $bloquearCampos ? 'readonly' : '' ?>>
-                </td>
-                <td>
+        <td>
+          <input type="text" class="form-control" value="<?= htmlspecialchars($tipoMostrar) ?>" readonly>
+          <input type="hidden" name="tipo[]" value="<?= htmlspecialchars($s['NombreTipo'] ?? '') ?>">
+          <input type="hidden" name="origen[]" value="<?= htmlspecialchars($origen) ?>">
+        </td>
 
-                    <button type="button" class="btn btn-danger btn-sm fa-solid fa-trash-can" data-del="row"></button>
+        <td>
+          <input type="text" name="servicio[]" class="form-control"
+                 value="<?= htmlspecialchars($s['Descripcion'] ?? '') ?>"
+                 <?= $esManual ? '' : 'readonly' ?>>
+        </td>
 
-                </td>
-              </tr>
-            <?php endforeach; ?>
-          </tbody>
+        <td>
+          <input type="number" name="cantidad[]" class="form-control text-end" step="1"
+                 value="<?= (int)($s['Cantidad'] ?? 1) ?>">
+        </td>
 
-      </table>
+        <td>
+          <input type="text" name="precio[]" class="form-control text-end" inputmode="decimal"
+                 value="<?= number_format((float)($s['Precio'] ?? 0), 2, '.', '') ?>"
+                 placeholder="0.00">
+        </td>
+
+        <td>
+          <button type="button" class="btn btn-danger btn-sm" data-del="row">
+            <i class="fa-solid fa-trash-can"></i>
+          </button>
+        </td>
+      </tr>
+    <?php endforeach; ?>
+  </tbody>
+</table>
+
     </div>
   </div>
 
@@ -248,8 +313,8 @@ $puedeCambiarTecnico = str_contains($rol, 'administrador') || str_contains($rol,
       <label class="form-label">Resto</label>
       <input type="number" step="0.01" name="resto" class="form-control" value="<?= $orden['Resto'] ?>" readonly>
     </div>
-    <div class="col-md-12 mt-2">
-      <div class="form-check">
+<div class="col-md-12 mt-2">
+        <div class="form-check">
         <input class="form-check-input" type="checkbox" id="cotizacionPendiente">
         <label class="form-check-label text-danger fw-semibold" for="cotizacionPendiente">
           Cotización pendiente
@@ -257,7 +322,7 @@ $puedeCambiarTecnico = str_contains($rol, 'administrador') || str_contains($rol,
       </div>
       <div id="msgPendiente" class="text-muted mt-1" style="display:none;">
         Los importes se llenarán cuando se haga la cotización.
-      </div>
+      </div> 
     </div>
   </div>
 
@@ -268,7 +333,7 @@ $puedeCambiarTecnico = str_contains($rol, 'administrador') || str_contains($rol,
         <label class="form-label">Estatus</label>
         <select name="estatus" id="estatus" class="form-select">
           <?php
-            $estatuses = ['Proceso','Espera','Avisado','Entregado','Cancelado'];
+            $estatuses = ['Proceso','Enviado a Tequila','Listo para Entrega','Cliente Avisado','Entregado', 'Cancelado','Retrasado'];
             foreach ($estatuses as $e) {
               $selected = $orden['Estatus'] == $e ? 'selected' : '';
               echo "<option value='$e' $selected>$e</option>";
@@ -284,7 +349,7 @@ $puedeCambiarTecnico = str_contains($rol, 'administrador') || str_contains($rol,
       <div class="col-md-4">
         <label class="form-label">Técnico Asignado</label>
         <select name="idTecnico" class="form-select" <?= !$puedeCambiarTecnico ? 'disabled' : '' ?>>
-          <option value="">En espera</option>
+          <option value="">Tecnico no asignado</option>
           <?php foreach ($tecnicos as $t): ?>
             <option value="<?= $t['idUsuario'] ?>" <?= $orden['idTecnico'] == $t['idUsuario'] ? 'selected' : '' ?>>
               <?= htmlspecialchars($t['NombreUsuario']) ?>

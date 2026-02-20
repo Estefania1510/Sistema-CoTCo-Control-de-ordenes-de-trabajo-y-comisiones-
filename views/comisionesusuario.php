@@ -2,36 +2,28 @@
 <div class="container-fluid mt-4">
   <h1 class="text-dark fw-bold mb-4">Mis Comisiones</h1>
 
-  <!--Cuadros informativos -->
 
-  <div class="row mb-4">
-    <div class="col-md-4">
-      <div class="card mb-4 border-0 shadow-sm" style="background-color:#fff8bd; color:#e2b808; ">
-        <div class="card-body">
-          <h5 class="card-title">Comisión Órdenes NO Entregadas</h5>
-          <h3 id="totalPendientes">$0.00</h3>
+<!-- Tarjeta Total por pagar + Pagar todo -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+          <h5 class="card-title mb-1">Total de comisiones por pagar</h5>
+          <h2 class="mb-0 text-danger" id="totalPorPagar">$0.00</h2>
+          <small class="text-muted">Suma de TODAS las comisiones pendientes de pagar</small>
         </div>
-      </div>
-    </div>
 
-        <div class="col-md-4">
-      <div class="card mb-4 border-0 shadow-sm" style="background-color:#e6f0ff; color:#003366; ">
-        <div class="card-body">
-          <h5 class="card-title">Comisión Órdenes Entregadas</h5>
-          <h3 id="totalEntregadas">$0.00</h3>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-4">
-      <div class="card mb-4 border-0 shadow-sm" style="background-color:#e6ffee; color:#004d26; ">
-        <div class="card-body">
-          <h5 class="card-title">Comisión Pagada</h5>
-          <h3 id="totalPagadas">$0.00</h3>
-        </div>
+        <button id="btnPagarTodo" class="btn btn-success btn-lg">
+          <i class="fas fa-check-circle me-2"></i> Pagar todo
+        </button>
       </div>
     </div>
   </div>
+</div>
+
+
+
 
   <div class="card shadow p-3 mb-4">
     <div class="row g-2">

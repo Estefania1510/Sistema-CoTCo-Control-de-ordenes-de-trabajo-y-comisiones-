@@ -36,6 +36,7 @@ const table = $('#tablaOrdenes').DataTable({
       { data: null, defaultContent: '' },
       { data: 'folio' },
       { data: 'cliente' },
+      { data: 'trabajo', defaultContent: '' },
       { data: 'tipo' },
       { data: 'fechaRecepcion' },
       { data: 'fechaEntrega' },
@@ -44,9 +45,9 @@ const table = $('#tablaOrdenes').DataTable({
         render: function (data) {
           const colores = {
             'Proceso': 'badge bg-warning',
-            'Espera': 'badge bg-secondary',
-            'EnviadoTequila': 'badge bg-primary',
-            'Avisado': 'badge bg-light text-dark',
+            'Enviado a Tequila': 'badge bg-primary',
+            'Listo para Entrega': 'badge bg-info text-dark',
+            'Cliente Avisado': 'badge bg-light text-dark',
             'Entregado': 'badge bg-success',
             'Cancelado': 'badge bg-danger',
             'Retrasado': 'badge bg-dark'
@@ -65,12 +66,11 @@ const table = $('#tablaOrdenes').DataTable({
             </button>
           `;
 
-          if (row.puedeEditar) {
             botones += `
               <button class="btn btn-outline-success btn-sm" data-edit="${row.folio}" data-tipo="${row.tipo}" title="Editar">
                 <i class="fas fa-pen"></i>
               </button>`;
-          }
+          
 
           botones += `
             <button class="btn btn-outline-danger btn-sm" data-ticket="${row.folio}" data-tipo="${row.tipo}" title="Descargar Ticket">
@@ -79,7 +79,8 @@ const table = $('#tablaOrdenes').DataTable({
           `;
 
           const esAdmin = rolesUsuario.includes('administrador');
-          if (esAdmin && row.tipo === "Mantenimiento" && row.tieneSoftware) {
+          const esTecnico = rolesUsuario.includes('tecnico');
+          if ((esAdmin || esTecnico) && row.tipo === "Mantenimiento" && row.tieneSoftware) {
             botones += `
               <button class="btn btn-outline-warning btn-sm" data-licencia="${row.folio}" title="Agregar Licencia Software">
                 <i class="fas fa-key"></i>
@@ -96,6 +97,18 @@ const table = $('#tablaOrdenes').DataTable({
     ],
     order: [1, 'desc']
 });
+
+function recalcularTablaOrdenes() {
+  setTimeout(() => {
+    table.columns.adjust();
+    if (table.responsive) {
+      table.responsive.recalc();
+    }
+  }, 250);
+}
+
+$(window).on('resize', recalcularTablaOrdenes);
+$(document).on('click', '#sidebarToggle', recalcularTablaOrdenes);
 
 
   if (estadoURL) {

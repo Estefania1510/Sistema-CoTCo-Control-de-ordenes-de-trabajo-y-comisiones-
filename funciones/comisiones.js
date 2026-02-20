@@ -8,6 +8,8 @@ document.addEventListener("DOMContentLoaded", () => {
   if (isDetalleView) {
     document.getElementById("btnBuscar")?.addEventListener("click", cargarDetalle);
     document.getElementById("filtroEstado")?.addEventListener("change", cargarDetalle);
+    document.getElementById("btnPagarTodo")?.addEventListener("click", pagarTodo);
+
     cargarDetalle();
   }
 
@@ -166,6 +168,17 @@ function cargarDetalle() {
         totalPagadas.textContent = `$${Number(tot.pagadas).toFixed(2)}`;
       }
 
+      const totalPorPagar = document.getElementById("totalPorPagar");
+      if (totalPorPagar) {
+        const pendiente = Number(data.pendiente || 0);
+        totalPorPagar.textContent = `$${pendiente.toFixed(2)}`;
+
+        // Deshabilitar botón si no hay nada pendiente
+        const btnPagarTodo = document.getElementById("btnPagarTodo");
+        if (btnPagarTodo) btnPagarTodo.disabled = pendiente <= 0;
+      }
+
+
       // Mostrar tabla
       if (data.status !== "ok" || !data.data.length) {
         tbody.innerHTML = `<tr><td colspan="7" class="text-muted">Sin comisiones para mostrar.</td></tr>`;
@@ -177,13 +190,21 @@ function cargarDetalle() {
         if (c.estado === "Pagado") color = "success";
         else if (c.estado === "Orden Entregada") color = "primary";
 
-        let acciones = "";
-        if (window.__ROL_POWER__) {
-          if (c.estado === "Orden Entregada")
-            acciones = `<button class="btn btn-success btn-sm" onclick="pagar(${c.idComisiones})">Pagar</button>`;
-          else if (c.estado === "Orden no Entregada")
-            acciones = `<button class="btn btn-warning btn-sm" onclick="adelantar(${c.idComisiones})">Adelantar</button>`;
+      let acciones = "";
+
+      if (window.__ROL_POWER__) {
+        if (c.estado === "Orden Entregada")
+          acciones = `<button class="btn btn-success btn-sm" onclick="pagar(${c.idComisiones})">Pagar</button>`;
+        else if (c.estado === "Orden no Entregada")
+          acciones = `<button class="btn btn-warning btn-sm" onclick="adelantar(${c.idComisiones})">Adelantar</button>`;
+      } else {
+        // Usuario normal: puede marcar como pagado SUS comisiones (no pagadas y no canceladas)
+        if (c.estado !== "Pagado" && c.estado !== "Orden Cancelada") {
+          acciones = `<button class="btn btn-success btn-sm" onclick="pagar(${c.idComisiones})">Marcar pagado</button>`;
         }
+      }
+
+
 
         let rutaNota = "";
         if (c.tipo === "Diseño") {
@@ -198,6 +219,14 @@ function cargarDetalle() {
           </a>
           `;
 
+          const botonesAccion = `
+           <div class="d-flex gap-2">
+            ${acciones || ""}
+            ${btnVerNota || ""}
+            </div>
+            `;
+
+
         tbody.innerHTML += `
           <tr>
           <td></td>
@@ -209,8 +238,7 @@ function cargarDetalle() {
             <td>$${Number(c.monto).toFixed(2)}</td>
             <td>${c.fechapago ? c.fechapago : 'Sin pagar'}</td>
             <td><span class="badge bg-${color}">${c.estado}</span></td>
-            ${window.__ROL_POWER__ ? `<td>${acciones}</td>` : ""}
-             <td> ${btnVerNota} </td>
+             <td> ${botonesAccion} </td>
           </tr>`;
       });
 
@@ -240,7 +268,7 @@ function cargarDetalle() {
       Swal.fire("Error", "No se pudo cargar el detalle", "error");
     });
 }
-
+//fin cargardetALLE
 
 
 // FUNCIONES DE PAGO
@@ -254,16 +282,28 @@ function pagar(idComision) {
   }).then((res) => {
     if (!res.isConfirmed) return;
 
-    fetch("../controllers/comisionesController.php", {
-      method: "POST",
-      body: JSON.stringify({ accion: "marcarPagada", idComision }),
-    })
+      fetch("../controllers/comisionesController.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accion: "marcarPagada", idComision }),
+      })
+
       .then((r) => r.json())
       .then((d) => {
         if (d.status === "ok") {
           Swal.fire({ icon: "success", title: "Pagada correctamente", timer: 1200, showConfirmButton: false });
+
+          // refresca detalle/mis comisiones
           cargarDetalle();
+
+          // si existe la tabla de gestión en esta vista, también se refresca
+          if (document.getElementById("tablaComisiones")) {
+            listarComisiones();
+          }
+        } else {
+          Swal.fire("Error", d.message || "No se pudo marcar como pagada", "error");
         }
+
       })
       .catch(() => Swal.fire("Error", "Error de conexión", "error"));
   });
@@ -280,10 +320,12 @@ function adelantar(idComision) {
   }).then((res) => {
     if (!res.isConfirmed) return;
 
-    fetch("../controllers/comisionesController.php", {
+        fetch("../controllers/comisionesController.php", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ accion: "adelantarComision", idComision }),
-    })
+      })
+
       .then((r) => r.json())
       .then((d) => {
         if (d.status === "ok") {
@@ -294,3 +336,33 @@ function adelantar(idComision) {
       .catch(() => Swal.fire("Error", "Error de conexión", "error"));
   });
 }
+
+function pagarTodo() {
+  Swal.fire({
+    title: "¿Pagar todas las comisiones pendientes?",
+    text: "Se marcarán como pagadas todas tus comisiones NO pagadas.",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonText: "Sí, pagar todo",
+    cancelButtonText: "Cancelar",
+  }).then((res) => {
+    if (!res.isConfirmed) return;
+
+    fetch("../controllers/comisionesController.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ accion: "pagarTodoUsuario" }),
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.status === "ok") {
+          Swal.fire({ icon: "success", title: "Listo", text: "Todas fueron marcadas como pagadas", timer: 1400, showConfirmButton: false });
+          cargarDetalle(); // refresca tabla + tarjeta
+        } else {
+          Swal.fire("Error", d.message || "No se pudo pagar todo", "error");
+        }
+      })
+      .catch(() => Swal.fire("Error", "Error de conexión", "error"));
+  });
+}
+

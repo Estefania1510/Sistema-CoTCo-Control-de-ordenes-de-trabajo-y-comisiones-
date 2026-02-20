@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../config/Conexion.php';
 require_once __DIR__ . '/../config/ConnectData.php';
 session_start();
-
+require_once __DIR__ . '/../config/session_control.php';
 header('Content-Type: application/json');
 
 $conexion = new Conexion($conData);
@@ -13,32 +13,127 @@ try {
     $accion = $data['accion'] ?? '';
 
     // LISTAR CLIENTES 
-    if ($accion === 'listarClientesConNotas') {
+// LISTAR TODOS LOS CLIENTES (con total de notas)
+if ($accion === 'listarClientes') {
 
-        $sql = "
-            SELECT 
-                c.idCliente,
-                c.NombreCliente,
-                c.Telefono,
-                c.Telefono2,
-                c.Direccion,
-                COUNT(DISTINCT n.idNota) AS totalNotas
-            FROM cliente c
-            INNER JOIN nota n ON n.idCliente = c.idCliente
-            GROUP BY c.idCliente, c.NombreCliente, c.Telefono, c.Telefono2, c.Direccion
-            ORDER BY c.NombreCliente ASC
-        ";
+    $sql = "
+        SELECT 
+            c.idCliente,
+            c.NombreCliente,
+            c.Telefono,
+            c.Telefono2,
+            c.Direccion,
+            COUNT(n.idNota) AS totalNotas
+        FROM cliente c
+        LEFT JOIN nota n ON n.idCliente = c.idCliente
+        GROUP BY c.idCliente, c.NombreCliente, c.Telefono, c.Telefono2, c.Direccion
+        ORDER BY c.NombreCliente ASC
+    ";
 
-        $stmt = $conn->prepare($sql);
-        $stmt->execute();
-        $clientes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $stmt = $conn->prepare($sql);
+    $stmt->execute();
+    $clientes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+    echo json_encode(["status" => "ok", "data" => $clientes]);
+    exit;
+}
+
+// OBTENER 1 CLIENTE
+if ($accion === 'obtenerCliente') {
+    $idCliente = $data['idCliente'] ?? null;
+    if (!$idCliente) {
+        echo json_encode(["status" => "error", "message" => "ID faltante"]);
+        exit;
+    }
+
+    $stmt = $conn->prepare("SELECT idCliente, NombreCliente, Direccion, Telefono, Telefono2 FROM cliente WHERE idCliente = ?");
+    $stmt->execute([$idCliente]);
+    $cliente = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$cliente) {
+        echo json_encode(["status" => "error", "message" => "Cliente no encontrado"]);
+        exit;
+    }
+
+    echo json_encode(["status" => "ok", "data" => $cliente]);
+    exit;
+}
+
+// CREAR CLIENTE
+if ($accion === 'crearCliente') {
+    $NombreCliente = trim($data['NombreCliente'] ?? '');
+    $Direccion     = trim($data['Direccion'] ?? '');
+    $Telefono      = trim($data['Telefono'] ?? '');
+    $Telefono2     = trim($data['Telefono2'] ?? '');
+
+    if ($NombreCliente === '') {
+        echo json_encode(["status" => "error", "message" => "NombreCliente es obligatorio"]);
+        exit;
+    }
+
+    $stmt = $conn->prepare("INSERT INTO cliente (NombreCliente, Direccion, Telefono, Telefono2) VALUES (?, ?, ?, ?)");
+    $stmt->execute([$NombreCliente, $Direccion, $Telefono, $Telefono2]);
+
+    echo json_encode(["status" => "ok", "message" => "Cliente creado correctamente"]);
+    exit;
+}
+
+// ACTUALIZAR CLIENTE
+if ($accion === 'actualizarCliente') {
+    $idCliente     = $data['idCliente'] ?? null;
+    $NombreCliente = trim($data['NombreCliente'] ?? '');
+    $Direccion     = trim($data['Direccion'] ?? '');
+    $Telefono      = trim($data['Telefono'] ?? '');
+    $Telefono2     = trim($data['Telefono2'] ?? '');
+
+    if (!$idCliente) {
+        echo json_encode(["status" => "error", "message" => "ID faltante"]);
+        exit;
+    }
+    if ($NombreCliente === '') {
+        echo json_encode(["status" => "error", "message" => "NombreCliente es obligatorio"]);
+        exit;
+    }
+
+    $stmt = $conn->prepare("
+        UPDATE cliente
+        SET NombreCliente = ?, Direccion = ?, Telefono = ?, Telefono2 = ?
+        WHERE idCliente = ?
+    ");
+    $stmt->execute([$NombreCliente, $Direccion, $Telefono, $Telefono2, $idCliente]);
+
+    echo json_encode(["status" => "ok", "message" => "Cliente actualizado correctamente"]);
+    exit;
+}
+
+// ELIMINAR CLIENTE (solo si NO tiene notas)
+if ($accion === 'eliminarCliente') {
+    $idCliente = $data['idCliente'] ?? null;
+    if (!$idCliente) {
+        echo json_encode(["status" => "error", "message" => "ID faltante"]);
+        exit;
+    }
+
+    // Verificar si tiene notas
+    $check = $conn->prepare("SELECT COUNT(*) FROM nota WHERE idCliente = ?");
+    $check->execute([$idCliente]);
+    $total = (int)$check->fetchColumn();
+
+    if ($total > 0) {
         echo json_encode([
-            "status" => "ok",
-            "data"   => $clientes
+            "status" => "error",
+            "message" => "No se puede eliminar: el cliente ya tiene órdenes registradas."
         ]);
         exit;
     }
+
+    $del = $conn->prepare("DELETE FROM cliente WHERE idCliente = ?");
+    $del->execute([$idCliente]);
+
+    echo json_encode(["status" => "ok", "message" => "Cliente eliminado correctamente"]);
+    exit;
+}
+
 
     // HISTORIAL DE UN CLIENTE
     if ($accion === 'historialCliente') {

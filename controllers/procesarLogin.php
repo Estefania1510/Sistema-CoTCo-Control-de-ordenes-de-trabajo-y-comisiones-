@@ -12,7 +12,7 @@
         $usuario  = $_POST['usuario'];
         $password = $_POST['password'];
 
-        $sql = "SELECT u.idUsuario, u.NombreUsuario, u.Usuario, u.Contraseña
+        $sql = "SELECT u.idUsuario, u.NombreUsuario, u.Usuario, u.FechaNacimiento, u.Contraseña
                 FROM usuario u
                 WHERE u.Usuario = :usuario AND u.Estatus = 'Activo'";
 
@@ -26,6 +26,7 @@
             if (password_verify($password, $user['Contraseña'])) {
                 $_SESSION['idUsuario'] = $user['idUsuario'];
                 $_SESSION['nombre']    = $user['NombreUsuario'];
+                $_SESSION['FechaNacimiento'] = $user['FechaNacimiento'];
 
          
                 $roles = [];
@@ -43,8 +44,12 @@
                 }
                 $_SESSION['roles'] = $roles;
 
+
+
                 header("Location: ../views/principal.php");
                 exit;
+
+                
 
             } else {
                 mostrarAlertaContraseña();

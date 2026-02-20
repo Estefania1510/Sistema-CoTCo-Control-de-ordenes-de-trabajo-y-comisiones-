@@ -2,6 +2,10 @@
 require_once __DIR__ . '/../config/Conexion.php';
 require_once __DIR__ . '/../config/ConnectData.php';
 session_start();
+require_once __DIR__ . '/../config/session_control.php';
+ini_set('display_errors', 0);
+error_reporting(0);
+header('Content-Type: application/json; charset=utf-8');
 
 header('Content-Type: application/json');
 
@@ -29,21 +33,24 @@ if ($accion === 'listar') {
   }
 
   // Traer todos los usuarios
-  $sql = "
-    SELECT 
-      u.idUsuario,
-      u.NombreUsuario,
-      GROUP_CONCAT(DISTINCT r.rol ORDER BY r.rol SEPARATOR ', ') AS rol,
-      COUNT(DISTINCT c.idComisiones) AS trabajos
-    FROM usuario u
-    INNER JOIN usuarioroles ur ON u.idUsuario = ur.idUsuario
-    INNER JOIN rol r ON ur.idRol = r.idRol
-    LEFT JOIN comisiones c ON u.idUsuario = c.idUsuario
-    WHERE u.Estatus = 'Activo'
-      AND r.rol NOT IN ('administrador', 'encargado')
-    GROUP BY u.idUsuario, u.NombreUsuario
-    ORDER BY u.NombreUsuario ASC
-  ";
+$sql = "
+  SELECT 
+    u.idUsuario,
+    u.NombreUsuario,
+    GROUP_CONCAT(DISTINCT r.rol ORDER BY r.rol SEPARATOR ', ') AS rol,
+
+    COUNT(DISTINCT IF(c.estado <> 'Pagado' AND c.estado <> 'Orden Cancelada', c.idComisiones, NULL)) AS trabajos
+
+  FROM usuario u
+  INNER JOIN usuarioroles ur ON u.idUsuario = ur.idUsuario
+  INNER JOIN rol r ON ur.idRol = r.idRol
+  LEFT JOIN comisiones c ON u.idUsuario = c.idUsuario
+  WHERE u.Estatus = 'Activo'
+    AND r.rol NOT IN ('administrador', 'encargado')
+  GROUP BY u.idUsuario, u.NombreUsuario
+  ORDER BY u.NombreUsuario ASC
+";
+
 
   $stmt = $conn->prepare($sql);
   $stmt->execute();
@@ -137,13 +144,26 @@ if ($accion === 'listar') {
       }
     }
 
+    $stmtPend = $conn->prepare("
+      SELECT COALESCE(SUM(monto),0)
+      FROM comisiones
+      WHERE idUsuario = :idUsuario
+        AND estado <> 'Pagado'
+        AND estado <> 'Orden Cancelada'
+    ");
+    $stmtPend->bindValue(':idUsuario', $usuarioDetalle, PDO::PARAM_INT);
+    $stmtPend->execute();
+    $pendienteGlobal = (float)$stmtPend->fetchColumn();
+
     echo json_encode([
       "status" => "ok",
       "data" => $detalle,
-      "totales" => $totales
+      "totales" => $totales,
+      "pendiente" => $pendienteGlobal
+
     ]);
     exit;
-  }
+  } //fin detalleusuario
 
   // Actualizar porcentaje
 if ($accion === "actualizarPorcentaje") {
@@ -200,32 +220,87 @@ if ($accion === "actualizarPorcentaje") {
     exit;
 }
 
-  // PAGAR O ADELANTAR COMISIÓN 
-  if (in_array($accion, ['marcarPagada', 'adelantarComision'])) {
-    if (!$isPower) {
-      echo json_encode(["status" => "error", "message" => "No autorizado"]);
+    // PAGAR O ADELANTAR COMISIÓN
+    if (in_array($accion, ['marcarPagada', 'adelantarComision'])) {
+
+      $idComision = $data['idComision'] ?? null;
+      if (!$idComision) {
+        echo json_encode(["status" => "error", "message" => "ID de comisión faltante"]);
+        exit;
+      }
+
+      // Si NO es admin/encargado, solo puede marcar pagada SU propia comisión
+      if (!$isPower) {
+        $stmtOwner = $conn->prepare("SELECT idUsuario, estado FROM comisiones WHERE idComisiones = :id");
+        $stmtOwner->bindValue(':id', $idComision, PDO::PARAM_INT);
+        $stmtOwner->execute();
+        $row = $stmtOwner->fetch(PDO::FETCH_ASSOC);
+
+        if (!$row) {
+          echo json_encode(["status" => "error", "message" => "Comisión no encontrada"]);
+          exit;
+        }
+
+        if ((int)$row['idUsuario'] !== (int)$idUsuario) {
+          echo json_encode(["status" => "error", "message" => "No autorizado"]);
+          exit;
+        }
+
+        // opcional: evitar pagar canceladas
+        if ($row['estado'] === 'Orden Cancelada') {
+          echo json_encode(["status" => "error", "message" => "No se puede marcar pagada una comisión cancelada"]);
+          exit;
+        }
+      }
+
+      // Marcar pagada (admin/encargado pueden pagar cualquiera; usuario solo la suya)
+      $fechaHoy = date('Y-m-d');
+      $stmt = $conn->prepare("
+        UPDATE comisiones 
+        SET estado = 'Pagado', fechapago = :fecha 
+        WHERE idComisiones = :id
+      ");
+      $stmt->bindParam(':fecha', $fechaHoy);
+      $stmt->bindParam(':id', $idComision);
+      $stmt->execute();
+
+      echo json_encode(["status" => "ok", "message" => "Comisión actualizada a pagada."]);
       exit;
     }
 
-    $idComision = $data['idComision'] ?? null;
-    if (!$idComision) {
-      echo json_encode(["status" => "error", "message" => "ID de comisión faltante"]);
+      // PAGAR TODO (usuario normal: solo sus comisiones; admin/encargado: también puede)
+    if ($accion === 'pagarTodoUsuario') {
+
+      // Si viene idUsuario en request y es power, podría pagar el de otro usuario.
+      // Si NO es power, solo paga el suyo.
+      $usuarioTarget = $data['idUsuario'] ?? $idUsuario;
+
+      if (!$isPower) {
+        $usuarioTarget = $idUsuario;
+      }
+
+      $fechaHoy = date('Y-m-d');
+
+      // Marca como pagadas TODAS las comisiones NO pagadas del usuario (y no canceladas)
+      $stmt = $conn->prepare("
+        UPDATE comisiones
+        SET estado = 'Pagado', fechapago = :fecha
+        WHERE idUsuario = :idUsuario
+          AND estado <> 'Pagado'
+          AND estado <> 'Orden Cancelada'
+      ");
+      $stmt->bindValue(':fecha', $fechaHoy);
+      $stmt->bindValue(':idUsuario', $usuarioTarget, PDO::PARAM_INT);
+      $stmt->execute();
+
+      echo json_encode([
+        "status" => "ok",
+        "message" => "Todas las comisiones fueron marcadas como pagadas"
+      ]);
       exit;
     }
 
-    $fechaHoy = date('Y-m-d');
-    $stmt = $conn->prepare("
-      UPDATE comisiones 
-      SET estado = 'Pagado', fechapago = :fecha 
-      WHERE idComisiones = :id
-    ");
-    $stmt->bindParam(':fecha', $fechaHoy);
-    $stmt->bindParam(':id', $idComision);
-    $stmt->execute();
 
-    echo json_encode(["status" => "ok", "message" => "Comisión actualizada a pagada."]);
-    exit;
-  }
 
   echo json_encode(["status" => "error", "message" => "Acción no válida."]);
 } catch (Throwable $e) {

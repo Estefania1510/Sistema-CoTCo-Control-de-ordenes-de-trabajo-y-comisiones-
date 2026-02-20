@@ -12,7 +12,7 @@ if (!$idNota) {
 }
 
 //CONSULTA MANTENIMIENTO
-$sql = "SELECT n.idNota, n.Total, n.Anticipo, n.Resto, n.FechaRecepcion, 
+$sql = "SELECT n.idNota, n.Trabajo, n.Total, n.Anticipo, n.Resto, n.FechaRecepcion, 
                n.Descripcion AS DescProblema, n.Comentario AS SugerenciaGeneral,
                c.NombreCliente, c.Direccion, c.Telefono, c.Telefono2,
                m.idMantenimiento, m.Equipo, m.Marca, m.Model, m.Contraseña, 
@@ -33,12 +33,26 @@ if (!$mantenimiento) {
   die("No se encontró la orden de mantenimiento.");
 }
 
-
-$sqlServ = "SELECT tm.NombreTipo, c.Servicio, a.Precio
-             FROM auxservicios a
-             INNER JOIN catalogomnt c ON a.idCatalogoMnt = c.idCatalogoMnt
-             INNER JOIN tipomantenimiento tm ON c.idTipoMnt = tm.idTipoMnt
-             WHERE a.idMantenimiento = ?";
+/**
+ * SERVICIOS (CATÁLOGO + MANUAL)
+ * - Manual: auxservicios.Origen='MANUAL' y auxservicios.Descripcion trae el texto
+ * - Catálogo: trae idCatalogoMnt y se obtiene tipo/servicio desde las tablas
+ */
+$sqlServ = "
+  SELECT
+    a.Origen,
+    a.Descripcion,
+    a.Cantidad,
+    a.Precio,
+    a.Subtotal,
+    tm.NombreTipo,
+    c.Servicio
+  FROM auxservicios a
+  LEFT JOIN catalogomnt c ON a.idCatalogoMnt = c.idCatalogoMnt
+  LEFT JOIN tipomantenimiento tm ON c.idTipoMnt = tm.idTipoMnt
+  WHERE a.idMantenimiento = ?
+  ORDER BY a.idAuxServicios ASC
+";
 $stmt = $conn->prepare($sqlServ);
 $stmt->execute([$mantenimiento['idMantenimiento'] ?? 0]);
 $servicios = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -100,6 +114,15 @@ $servicios = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </div>
   </div>
 
+  <!-- TRABAJO -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <h5 class="mb-3"><i class="fas fa-tag me-2"></i> Trabajo</h5>
+      <input type="text" class="form-control"
+             value="<?= htmlspecialchars($mantenimiento['Trabajo'] ?? '') ?>" readonly>
+    </div>
+  </div>
+      
   <!-- DATOS DEL EQUIPO -->
   <div class="card mb-4 shadow-sm">
     <div class="card-body row g-3">
@@ -150,30 +173,50 @@ $servicios = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </div>
   </div>
 
-  <!-- TABLA DE SERVICIOS -->
+  <!-- TABLA DE SERVICIOS (CATÁLOGO + MANUAL) -->
   <div class="card mb-4 shadow-sm">
     <div class="card-body">
-      <h5 class="mb-3"><i class="fas fa-list me-2"></i> Servicios del Catálogo</h5>
+      <h5 class="mb-3"><i class="fas fa-list me-2"></i> Servicios</h5>
+
       <div class="table-responsive">
         <table class="table table-bordered table-striped">
           <thead class="table-light text-center">
             <tr>
               <th>Tipo</th>
               <th>Servicio</th>
+              <th>Cantidad</th>
               <th>Precio</th>
+              <th>Subtotal</th>
             </tr>
           </thead>
           <tbody>
             <?php if (!empty($servicios)): ?>
               <?php foreach ($servicios as $s): ?>
+                <?php
+                  $origen = $s['Origen'] ?? 'CATALOGO';
+                  $esManual = ($origen === 'MANUAL');
+
+                  $tipo = $esManual ? 'Manual' : ($s['NombreTipo'] ?? '');
+                  $servicio = $esManual
+                    ? ($s['Descripcion'] ?? '')
+                    : ($s['Servicio'] ?? ($s['Descripcion'] ?? ''));
+
+                  $cantidad = (int)($s['Cantidad'] ?? 1);
+                  if ($cantidad <= 0) $cantidad = 1;
+
+                  $precio = (float)($s['Precio'] ?? 0);
+                  $subtotal = (float)($s['Subtotal'] ?? ($cantidad * $precio));
+                ?>
                 <tr>
-                  <td class="text-center"><?= htmlspecialchars($s['NombreTipo']) ?></td>
-                  <td class="text-center"><?= htmlspecialchars($s['Servicio']) ?></td>
-                  <td class="text-center">$<?= number_format($s['Precio'], 2) ?></td>
+                  <td class="text-center"><?= htmlspecialchars($tipo) ?></td>
+                  <td class="text-center"><?= htmlspecialchars($servicio) ?></td>
+                  <td class="text-center"><?= $cantidad ?></td>
+                  <td class="text-center">$<?= number_format($precio, 2) ?></td>
+                  <td class="text-center">$<?= number_format($subtotal, 2) ?></td>
                 </tr>
               <?php endforeach; ?>
             <?php else: ?>
-              <tr><td colspan="3" class="text-center">No hay servicios registrados.</td></tr>
+              <tr><td colspan="5" class="text-center">No hay servicios registrados.</td></tr>
             <?php endif; ?>
           </tbody>
         </table>

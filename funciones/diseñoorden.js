@@ -74,47 +74,100 @@ $(document).on('input', 'input[name="cantidad[]"], input[name="precio[]"]', func
 
 
 // CÁLCULO DE COSTOS
-function calcularCostos() {
-  let subtotal = 0;
-  const table = $.fn.dataTable.isDataTable('#tablaMateriales')
-    ? $('#tablaMateriales').DataTable()
-    : null;
+// function calcularCostos() {
+//   let subtotal = 0;
+//   const table = $.fn.dataTable.isDataTable('#tablaMateriales')
+//     ? $('#tablaMateriales').DataTable()
+//     : null;
 
-  if (table) {
-    table.rows({ page: 'all' }).every(function () {
-      const node = this.node();
-      const cantidad = parseFloat($(node).find("input[name='cantidad[]']").val()) || 0;
-      const precio = parseFloat($(node).find("input[name='precio[]']").val()) || 0;
-      subtotal += cantidad * precio;
-    });
-  } else {
-    $("#tablaMateriales tbody tr").each(function () {
-      const cantidad = parseFloat($(this).find("input[name='cantidad[]']").val()) || 0;
-      const precio = parseFloat($(this).find("input[name='precio[]']").val()) || 0;
-      subtotal += cantidad * precio;
-    });
-  }
+//   if (table) {
+//     table.rows({ page: 'all' }).every(function () {
+//       const node = this.node();
+//       const cantidad = parseFloat($(node).find("input[name='cantidad[]']").val()) || 0;
+//       const precio = parseFloat($(node).find("input[name='precio[]']").val()) || 0;
+//       subtotal += cantidad * precio;
+//     });
+//   } else {
+//     $("#tablaMateriales tbody tr").each(function () {
+//       const cantidad = parseFloat($(this).find("input[name='cantidad[]']").val()) || 0;
+//       const precio = parseFloat($(this).find("input[name='precio[]']").val()) || 0;
+//       subtotal += cantidad * precio;
+//     });
+//   }
 
-  const diseno = parseFloat($("input[name='diseño']").val()) || 0;
-  const total = subtotal + diseno;
-  const anticipoField = $("input[name='anticipo']");
-  const restoField = $("input[name='resto']");
-  const errorDiv = $("#error-anticipo");
-  const isPendiente = $("#cotPendiente").is(":checked");
+//   const diseno = parseFloat($("input[name='diseño']").val()) || 0;
+//   const total = subtotal + diseno;
+//   const anticipoField = $("input[name='anticipo']");
+//   const restoField = $("input[name='resto']");
+//   const errorDiv = $("#error-anticipo");
+//   const isPendiente = $("#cotPendiente").is(":checked");
 
-  $("input[name='subtotal']").val(subtotal.toFixed(2));
-  $("input[name='total']").val(total.toFixed(2));
+//   $("input[name='subtotal']").val(subtotal.toFixed(2));
+//   $("input[name='total']").val(total.toFixed(2));
   
-  if (isPendiente) {
-    restoField.val("0.00"); 
-    errorDiv.hide();
-    return; 
-  }
+//   if (isPendiente) {
+//     restoField.val("0.00"); 
+//     errorDiv.hide();
+//     return; 
+//   }
 
-  if (!anticipoField.val().trim()) {
-    restoField.val("");
-    errorDiv.hide();
-  } else {
+//   if (!anticipoField.val().trim()) {
+//     restoField.val("");
+//     errorDiv.hide();
+//   } else {
+//     const anticipo = parseFloat(anticipoField.val()) || 0;
+//     const resto = total - anticipo;
+//     restoField.val(resto.toFixed(2));
+
+//     if (anticipo > total) {
+//       errorDiv.text("El anticipo excede el total. Se debe regresar el sobrante al cliente.").show();
+//     } else {
+//       errorDiv.hide();
+//     }
+//   }
+// }
+
+// CÁLCULO DE COSTOS
+  function calcularCostos() {
+    let subtotal = 0;
+
+    const isPendiente = $("#cotPendiente").is(":checked");
+
+    const table = $.fn.dataTable.isDataTable('#tablaMateriales')
+      ? $('#tablaMateriales').DataTable()
+      : null;
+
+    if (table) {
+      table.rows({ page: 'all' }).every(function () {
+        const node = this.node();
+        const cantidad = parseFloat($(node).find("input[name='cantidad[]']").val()) || 0;
+        const precio = parseFloat($(node).find("input[name='precio[]']").val()) || 0;
+        subtotal += cantidad * precio;
+      });
+    } else {
+      $("#tablaMateriales tbody tr").each(function () {
+        const cantidad = parseFloat($(this).find("input[name='cantidad[]']").val()) || 0;
+        const precio = parseFloat($(this).find("input[name='precio[]']").val()) || 0;
+        subtotal += cantidad * precio;
+      });
+    }
+
+    const diseno = parseFloat($("input[name='diseño']").val()) || 0;
+    const total = subtotal + diseno;
+
+    const anticipoField = $("input[name='anticipo']");
+    const restoField = $("input[name='resto']");
+    const errorDiv = $("#error-anticipo");
+
+    $("input[name='subtotal']").val(subtotal.toFixed(2));
+    $("input[name='total']").val(total.toFixed(2));
+
+    if (isPendiente) {
+      restoField.val("0.00");
+      errorDiv.hide();
+      return;
+    }
+
     const anticipo = parseFloat(anticipoField.val()) || 0;
     const resto = total - anticipo;
     restoField.val(resto.toFixed(2));
@@ -125,7 +178,8 @@ function calcularCostos() {
       errorDiv.hide();
     }
   }
-}
+
+
 
 
 $(document).on('input', "input[name='cantidad[]'], input[name='precio[]'], input[name='diseño'], input[name='anticipo']", function () {
@@ -161,6 +215,7 @@ $(document).on('input', '.child input[name="cantidad[]"], .child input[name="pre
 
 //  COTIZACIÓN PENDIENTE
 function CotizacionPendiente() {
+  const esDigital = $("#esDigital").is(":checked");
   const isPendiente = $("#cotPendiente").is(":checked");
   const subtotal = $("input[name='subtotal']");
   const total = $("input[name='total']");
@@ -177,9 +232,12 @@ function CotizacionPendiente() {
     resto.val("").prop("readonly", true);
     anticipo.prop("readonly", false);
 
-    precios.each(function () {
-      $(this).val("").prop("readonly", true).addClass("bg-light");
-    });
+    if (!esDigital) {
+      precios.each(function () {
+        $(this).val("").prop("readonly", true).addClass("bg-light");
+      });
+    }
+
 
     msgPendiente.show();
   } else {
@@ -188,7 +246,11 @@ function CotizacionPendiente() {
     resto.prop("readonly", true);
     anticipo.prop("readonly", false);
     diseño.prop("readonly", false);
+
+    if (!esDigital) {
     precios.prop("readonly", false).removeClass("bg-light");
+    }
+
 
     msgPendiente.hide();
     calcularCostos();
@@ -198,9 +260,79 @@ function CotizacionPendiente() {
 $("#cotPendiente").on("change", CotizacionPendiente);
 $(window).on("load", CotizacionPendiente);
 
+  // ================= DISEÑO DIGITAL =================
+
+function toggleDigitalRequired() {
+  const esDigital = $("#esDigital").is(":checked");
+
+  // Si es digital, el material es opcional (no requerido)
+  // Si NO es digital, al menos un material sí debe ser requerido
+  $("input[name='material[]']").prop("required", !esDigital);
+
+  // Si está cot pendiente, igual no importa, pero recalculamos por si acaso
+  calcularCostos();
+}
+
+  $("#esDigital").on("change", toggleDigitalRequired);
+  $(window).on("load", toggleDigitalRequired);
+
+  function toggleBloqueEntrega() {
+    const esDigital = $("#esDigital").is(":checked");
+    $("#bloqueEntrega").toggle(esDigital);
+
+    $("#medioEntrega").prop("required", esDigital);
+
+    if (!esDigital) {
+      $("#medioEntrega").val("");
+    }
+  }
+
+
+  $("#esDigital").on("change", toggleBloqueEntrega);
+  $(window).on("load", toggleBloqueEntrega);
+
+
 
 // AUTOCOMPLETAR CLIENTE
+// $(function () {
+//   $("#nombreCliente").autocomplete({
+//     source: function (request, response) {
+//       $.ajax({
+//         url: "../controllers/BuscarCliente.php",
+//         dataType: "json",
+//         data: { term: request.term },
+//         success: function (data) {
+//           response($.map(data, function (item) {
+//             return {
+//               label: item.NombreCliente,
+//               value: item.NombreCliente,
+//               idCliente: item.idCliente, 
+//               telefono: item.Telefono,
+//               telefono2: item.Telefono2,
+//               direccion: item.Direccion
+//             };
+//           }));
+//         }
+//       });
+//     },
+//     minLength: 1,
+//     select: function (event, ui) {
+//       $("#telefono").val(ui.item.telefono);
+//       $("#telefono2").val(ui.item.telefono2);
+//       $("#direccion").val(ui.item.direccion);
+//       $("#idCliente").val(ui.item.idCliente);
+//     }
+//   });
+// });
+
+//AUTOCOMPLETAR CLIENTE
 $(function () {
+
+  // Si el usuario escribe, invalida selección previa
+  $("#nombreCliente").on("input", function () {
+    $("#idCliente").val("");
+  });
+
   $("#nombreCliente").autocomplete({
     source: function (request, response) {
       $.ajax({
@@ -212,7 +344,7 @@ $(function () {
             return {
               label: item.NombreCliente,
               value: item.NombreCliente,
-              idCliente: item.idCliente, 
+              idCliente: item.idCliente,
               telefono: item.Telefono,
               telefono2: item.Telefono2,
               direccion: item.Direccion
@@ -222,15 +354,21 @@ $(function () {
       });
     },
     minLength: 1,
+    delay: 250, // ✅ ayuda con tecleo rápido
     select: function (event, ui) {
-      $("#telefono").val(ui.item.telefono);
-      $("#telefono2").val(ui.item.telefono2);
-      $("#direccion").val(ui.item.direccion);
-      $("#idCliente").val(ui.item.idCliente);
+      $("#telefono").val(ui.item.telefono || "");
+      $("#telefono2").val(ui.item.telefono2 || "");
+      $("#direccion").val(ui.item.direccion || "");
+      $("#idCliente").val(ui.item.idCliente); // ✅
+    },
+    change: function (event, ui) {
+      // si NO eligió una opción del autocomplete, no hay cliente seleccionado
+      if (!ui.item) {
+        $("#idCliente").val("");
+      }
     }
   });
 });
-
 
 //VALIDAR TELÉFONOS
 function validarTelefono(input) {
@@ -281,4 +419,6 @@ $('#telefono, #telefono2').on('input', function () {
     }
   });
 
- });
+
+
+});

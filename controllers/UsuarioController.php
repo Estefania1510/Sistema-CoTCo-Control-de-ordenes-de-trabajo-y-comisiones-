@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../config/Conexion.php';
 require_once __DIR__ . '/../config/ConnectData.php';
 session_start();
+require_once __DIR__ . '/../config/session_control.php';
 
 $conexion = new Conexion($conData);
 $conn = $conexion->getConnection();
@@ -17,23 +18,35 @@ try {
 
         $nombre = trim($_POST['NombreUsuario']);
         $usuario = trim($_POST['Usuario']);
+        $fechaNacimiento = trim($_POST['FechaNacimiento'] ?? '');
         $password = $_POST['Contraseña'] ?? '';
         $roles = $_POST['Rol'] ?? []; 
 
-        if (empty($nombre) || empty($usuario) || empty($roles)) {
+        if (empty($nombre) || empty($usuario) || empty($roles) || empty($fechaNacimiento)) {
             throw new Exception("Faltan campos obligatorios.");
         }
+
+            // Si es usuario nuevo, la contraseña es obligatoria
+    if (!$idUsuario && empty($password)) {
+        throw new Exception("La contraseña es obligatoria para registrar un usuario nuevo.");
+    }
+
 
         // EDITAR
         if ($idUsuario) {
             $conn->beginTransaction(); 
 
-            $sql = "UPDATE usuario SET NombreUsuario = :nombre, Usuario = :usuario";
-            $params = [
-                ':nombre' => $nombre,
-                ':usuario' => $usuario,
-                ':id' => $idUsuario
-            ];
+        $sql = "UPDATE usuario 
+                SET NombreUsuario = :nombre, 
+                    Usuario = :usuario,
+                    FechaNacimiento = :fechaNacimiento";
+        $params = [
+            ':nombre' => $nombre,
+            ':usuario' => $usuario,
+            ':fechaNacimiento' => $fechaNacimiento,
+            ':id' => $idUsuario
+        ];
+
 
             if (!empty($password)) {
                 $sql .= ", Contraseña = :pass";
@@ -70,13 +83,16 @@ try {
                 throw new Exception("El nombre de usuario ya existe.");
             }
 
-            $stmt = $conn->prepare("INSERT INTO usuario (NombreUsuario, Usuario, Contraseña, Estatus)
-                                    VALUES (:nombre, :usuario, :pass, 'Activo')");
-            $stmt->execute([
+            $stmt = $conn->prepare("INSERT INTO usuario (NombreUsuario, Usuario, Contraseña, Estatus, FechaNacimiento)
+                        VALUES (:nombre, :usuario, :pass, 'Activo', :fechaNacimiento)");
+
+                $stmt->execute([
                 ':nombre' => $nombre,
                 ':usuario' => $usuario,
-                ':pass' => password_hash($password, PASSWORD_BCRYPT)
+                ':pass' => password_hash($password, PASSWORD_BCRYPT),
+                ':fechaNacimiento' => $fechaNacimiento
             ]);
+
 
             $idNuevo = $conn->lastInsertId();
 

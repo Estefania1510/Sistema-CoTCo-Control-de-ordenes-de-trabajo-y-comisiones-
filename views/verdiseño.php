@@ -13,10 +13,10 @@ if (!$idNota) {
 
 
 // CONSULTA DE DISEÑO
-$sql = "SELECT n.idNota, n.Total, n.Anticipo, n.Resto, n.FechaEntrega, 
+$sql = "SELECT n.idNota, n.Trabajo, n.Total, n.Anticipo, n.Resto, n.FechaEntrega, 
                n.Descripcion AS DescTrabajo, n.Comentario,
                c.NombreCliente, c.Direccion, c.Telefono, c.Telefono2,
-               nd.idDiseño, nd.CostoDiseño, nd.Estatus,
+               nd.idDiseño, nd.CostoDiseño, nd.Estatus, nd.EsDigital, nd.MedioEntrega,
                u.NombreUsuario AS Diseñador,
                us.NombreUsuario AS RecepcionadoPor
         FROM nota n
@@ -97,6 +97,16 @@ $materiales = $stmt->fetchAll(PDO::FETCH_ASSOC);
       </div>
     </div>
   </div>
+
+  <!-- TRABAJO-->
+      <div class="card mb-4">
+       <div class="card-body">
+        <h5 class="mb-3"><i class="fas fa-tag me-2"></i> Trabajo</h5>
+        <input type="text" class="form-control"
+               value="<?= htmlspecialchars($diseno['Trabajo'] ?? '') ?>" readonly>
+        </div>
+      </div>
+
 
   <!-- DATOS DEL DISEÑO -->
   <div class="card mb-4 shadow-sm">

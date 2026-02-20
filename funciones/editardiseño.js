@@ -6,40 +6,42 @@ document.addEventListener("DOMContentLoaded", () => {
 document.getElementById('addRow').addEventListener('click', () => {
   const table = $('#tablaMateriales').DataTable();
 
-  const firstRow = table.row(0).node();
-  const newRow = $(firstRow).clone();
+  // Si no hay filas, crea una desde cero
+  if (table.rows().count() === 0) {
+    const rowNode = $(`
+      <tr>
+        <td></td>
+        <td><input type="text" name="material[]" class="form-control" value=""></td>
+        <td><input type="text" name="cantidad[]" class="form-control" value=""></td>
+        <td><input type="text" name="precio[]" class="form-control" value=""></td>
+        <td><button type="button" class="btn btn-danger btn-sm fa-solid fa-trash-can" data-del="row"></button></td>
+      </tr>
+    `);
 
-  newRow.find('input').val('');
-  newRow.removeAttr('data-original');
+    table.row.add(rowNode).draw(false);
+  } else {
+    // Si sí hay, clona la primera
+    const firstRow = table.row(0).node();
+    const newRow = $(firstRow).clone();
+    newRow.find('input').val('');
+    newRow.removeAttr('data-original');
 
-  // Si el usuario NO es admin o encargado, desbloquea los campos para editar el nuevo material
-  if (!rolUsuario.includes('administrador') && !rolUsuario.includes('encargado')) {
     newRow.find('input[name="material[]"]').prop('readonly', false);
     newRow.find('input[name="cantidad[]"]').prop('readonly', false);
     newRow.find('input[name="precio[]"]').prop('readonly', false);
+
+    table.row.add(newRow).draw(false);
   }
 
-  table.row.add(newRow).draw(false);
   table.responsive.rebuild();
   table.responsive.recalc();
-
   calcularCostos();
 });
 
 
-// ELIMINAR FILA (solo admin o encargado)
-$('#tablaMateriales tbody').on('click', '[data-del="row"]', function () {
-  if (!rolUsuario.includes('administrador') && !rolUsuario.includes('encargado'))
- {
-    Swal.fire({
-      icon: "warning",
-      title: "Acción no permitida",
-      text: "Solo el administrador o encargado pueden eliminar materiales.",
-      confirmButtonColor: "#3085d6"
-    });
-    return;
-  }
 
+// ELIMINAR FILA (TODOS)
+$('#tablaMateriales tbody').on('click', '[data-del="row"]', function () {
   const table = $('#tablaMateriales').DataTable();
   let tr = $(this).closest('tr');
   let row = table.row(tr);
@@ -58,6 +60,7 @@ $('#tablaMateriales tbody').on('click', '[data-del="row"]', function () {
   table.columns.adjust().responsive.recalc();
   calcularCostos();
 });
+
 
 
   // VALIDACIÓN DE CAMPOS NUMÉRICOS
@@ -219,22 +222,98 @@ $('#tablaMateriales tbody').on('click', '[data-del="row"]', function () {
     }
 
   });
+    
 
-    if (!rolUsuario.includes('administrador') && !rolUsuario.includes('encargado'))
-   {
-      document.querySelectorAll('[data-del="row"]').forEach(btn => {
-        btn.style.display = 'none';
-      });
-   }
+    
+    // ==========================
+// WhatsApp (Avisar / Abrir chat) con selección de teléfono
+// ==========================
+function normalizarTelefono(raw) {
+  if (!raw) return "";
+  let tel = String(raw).replace(/\D+/g, ""); // solo dígitos
 
-      if (!rolUsuario.includes('administrador') && !rolUsuario.includes('encargado')) {
-        document.querySelectorAll('#tablaMateriales tbody tr[data-original="1"]').forEach(tr => {
-          tr.querySelectorAll('input[name="material[]"], input[name="cantidad[]"], input[name="precio[]"]').forEach(input => {
-            input.setAttribute('readonly', true);
-          });
-        });
+  // Si viene con 10 dígitos, asumimos México y agregamos 52
+  if (tel.length === 10) tel = "52" + tel;
+
+  return tel;
+}
+
+function obtenerTelefonosValidos() {
+  const raw1 = document.getElementById("wa_tel1")?.value || "";
+  const raw2 = document.getElementById("wa_tel2")?.value || "";
+
+  const tel1 = normalizarTelefono(raw1);
+  const tel2 = normalizarTelefono(raw2);
+
+  const lista = [];
+  if (tel1) lista.push({ key: "tel1", tel: tel1, label: `Teléfono 1: ${raw1}` });
+  if (tel2) lista.push({ key: "tel2", tel: tel2, label: `Teléfono 2: ${raw2}` });
+
+  return lista;
+}
+
+async function elegirTelefonoSiEsNecesario() {
+  const telefonos = obtenerTelefonosValidos();
+
+  if (telefonos.length === 0) {
+    await Swal.fire("Sin teléfono", "Este cliente no tiene teléfono registrado.", "warning");
+    return null;
+  }
+
+  // Si solo hay uno → no preguntar
+  if (telefonos.length === 1) return telefonos[0].tel;
+
+  // Si hay dos → mostrar radio buttons
+  const inputOptions = {};
+  telefonos.forEach(t => {
+    inputOptions[t.tel] = t.label;
+  });
+
+  const { value: telSeleccionado } = await Swal.fire({
+    icon: "question",
+    title: "¿A cuál teléfono quieres enviar?",
+    input: "radio",
+    inputOptions: inputOptions,
+    inputValidator: (value) => {
+      if (!value) {
+        return "Selecciona un teléfono";
       }
+    },
+    confirmButtonText: '<i class="fa-brands fa-whatsapp me-1"></i> Continuar',
+    cancelButtonText: "Cerrar",
+    showCancelButton: true,
+    confirmButtonColor: "#198754"
+  });
 
+  return telSeleccionado || null;
+}
+
+async function abrirWhatsConMensaje() {
+  const tel = await elegirTelefonoSiEsNecesario();
+  if (!tel) return;
+
+  const cliente = document.getElementById("wa_cliente")?.value?.trim() || "cliente";
+  const trabajo = document.querySelector('input[name="trabajo"]')?.value?.trim() || "tu trabajo";
+
+  // (Opcional) cambiar estatus en pantalla
+  // const estatusSelect = document.getElementById("estatus");
+  // if (estatusSelect) estatusSelect.value = "Cliente Avisado";
+
+  const texto = `¡Hola ${cliente}! Te informamos de ICT que tu trabajo ${trabajo} ya está listo para ser recogido. ¡Te esperamos!`;
+  const url = `https://wa.me/${tel}?text=${encodeURIComponent(texto)}`;
+  window.open(url, "_blank", "noopener");
+}
+
+async function abrirWhatsChat() {
+  const tel = await elegirTelefonoSiEsNecesario();
+  if (!tel) return;
+
+  const url = `https://wa.me/${tel}`;
+  window.open(url, "_blank", "noopener");
+}
+
+document.getElementById("btnWhatsAvisar")?.addEventListener("click", abrirWhatsConMensaje);
+document.getElementById("btnWhatsChat")?.addEventListener("click", abrirWhatsChat);
 
 
 });

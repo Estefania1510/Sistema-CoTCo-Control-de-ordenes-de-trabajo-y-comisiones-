@@ -1,6 +1,8 @@
 document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("btnBuscar").addEventListener("click", cargarDetalle);
-  document.getElementById("filtroEstado").addEventListener("change", cargarDetalle);
+  document.getElementById("btnBuscar")?.addEventListener("click", cargarDetalle);
+  document.getElementById("filtroEstado")?.addEventListener("change", cargarDetalle);
+  document.getElementById("btnPagarTodo")?.addEventListener("click", pagarTodo);
+
   cargarDetalle();
 });
 
@@ -15,12 +17,13 @@ function cargarDetalle() {
   const fechaFin = val("fechaFin") || null;
   const filtroEstado = val("filtroEstado", "todas");
 
-  if ($.fn.DataTable.isDataTable('#tablaDetalle')) {
-    $('#tablaDetalle').DataTable().destroy();
+  // destruir datatable si existe
+  if ($.fn.DataTable.isDataTable("#tablaDetalle")) {
+    $("#tablaDetalle").DataTable().destroy();
   }
 
   const tbody = document.querySelector("#tablaDetalle tbody");
-  tbody.innerHTML = ""; 
+  tbody.innerHTML = "";
 
   fetch("../controllers/comisionesController.php", {
     method: "POST",
@@ -33,59 +36,64 @@ function cargarDetalle() {
       filtroEstado,
     }),
   })
-    .then((r) => r.json())
+    .then(async (r) => {
+      // evita el clásico "unexpected character" si PHP manda warnings/html
+      const text = await r.text();
+      try {
+        return JSON.parse(text);
+      } catch (e) {
+        console.error("Respuesta NO JSON:", text);
+        throw e;
+      }
+    })
     .then((data) => {
-      // Totales
-      const tot = data.totales || { entregadas: 0, pendientes: 0, pagadas: 0 };
-      document.getElementById("totalEntregadas").textContent = `$${Number(tot.entregadas).toFixed(2)}`;
-      document.getElementById("totalPendientes").textContent = `$${Number(tot.pendientes).toFixed(2)}`;
-      document.getElementById("totalPagadas").textContent = `$${Number(tot.pagadas).toFixed(2)}`;
+      // Tarjeta total por pagar
+      const totalPorPagar = document.getElementById("totalPorPagar");
+      if (totalPorPagar) {
+        const pendiente = Number(data.pendiente || 0);
+        totalPorPagar.textContent = `$${pendiente.toFixed(2)}`;
 
+        const btnPagarTodo = document.getElementById("btnPagarTodo");
+        if (btnPagarTodo) btnPagarTodo.disabled = pendiente <= 0;
+      }
+
+      // si no hay datos
       if (data.status !== "ok" || !data.data || !data.data.length) {
-        tbody.innerHTML = ""; 
-        return; 
+        tbody.innerHTML = `<tr><td colspan="10" class="text-muted text-center">Sin comisiones para mostrar.</td></tr>`;
+        initDT();
+        return;
       }
 
       data.data.forEach((c) => {
         let color = "secondary";
-        if (c.estado === "Orden Cancelada") {
-            color = "danger";
-            c.monto = 0; 
-        } 
-        else if (c.estado === "Pagado") {
-            color = "success";
-        }
-        else if (c.estado === "Orden Entregada") {
-            color = "primary";
-        }
+        if (c.estado === "Orden Cancelada") color = "danger";
+        else if (c.estado === "Pagado") color = "success";
+        else if (c.estado === "Orden Entregada") color = "primary";
 
+        // botones de acción
+        let acciones = "";
 
-          let botones = "";
-          if (window.__ROL_POWER__) {
-            if (c.estado === "Orden Cancelada") {
-                botones = "";
-            }
-            else if (c.estado === "Orden Entregada") {
-                botones = `<button class="btn btn-success btn-sm" onclick="pagar(${c.idComisiones})">Pagar</button>`;
-            }
-            else if (c.estado === "Orden no Entregada") {
-                botones = `<button class="btn btn-warning btn-sm" onclick="adelantar(${c.idComisiones})">Adelantar</button>`;
-            }
+        if (window.__ROL_POWER__) {
+          // admin/encargado
+          if (c.estado === "Orden Entregada") {
+            acciones += `<button class="btn btn-success btn-sm" onclick="pagar(${c.idComisiones})">Pagar</button>`;
+          } else if (c.estado === "Orden no Entregada") {
+            acciones += `<button class="btn btn-warning btn-sm" onclick="adelantar(${c.idComisiones})">Adelantar</button>`;
           }
-          
-        let rutaNota = "";
-        if (c.tipo === "Diseño") {
-            rutaNota = `verdiseño.php?id=${c.folio}`;
-        } else if (c.tipo === "Mantenimiento") {
-            rutaNota = `vermantenimiento.php?id=${c.folio}`;
         }
 
-        // Botón ver nota
-        let btnVerNota = `
+        // ver nota
+        let rutaNota = "";
+        if (c.tipo === "Diseño") rutaNota = `verdiseño.php?id=${c.folio}`;
+        if (c.tipo === "Mantenimiento") rutaNota = `vermantenimiento.php?id=${c.folio}`;
+
+        const btnVerNota = `
           <a class="btn btn-outline-primary btn-sm" href="${rutaNota}" title="Ver Nota">
             <i class="fas fa-eye"></i>
           </a>
         `;
+
+        const botonesAccion = `<div class="d-flex gap-2">${acciones}${btnVerNota}</div>`;
 
         tbody.innerHTML += `
           <tr>
@@ -94,40 +102,36 @@ function cargarDetalle() {
             <td>${c.NombreCliente}</td>
             <td>${c.tipo}</td>
             <td>${c.FechaRecepcion}</td>
-            <td>${c.FechaEntrega ?? '-'}</td>
+            <td>${c.FechaEntrega ?? "-"}</td>
             <td>$${Number(c.monto).toFixed(2)}</td>
-            <td>${c.fechapago ? c.fechapago : 'Sin pagar'}</td>
+            <td>${c.fechapago ? c.fechapago : "-"}</td>
             <td><span class="badge bg-${color}">${c.estado}</span></td>
-            <td>
-            ${botones}
-            ${btnVerNota}
-            </td>
+            <td>${botonesAccion}</td>
           </tr>`;
       });
 
-      if ($.fn.DataTable.isDataTable('#tablaDetalle')) {
-        $('#tablaDetalle').DataTable().destroy();
-      }
-
-      $('#tablaDetalle').DataTable({
-        responsive: {
-          details: { type: 'column', target: 0 },
-        },
-        columnDefs: [{ className: 'dtr-control', orderable: true, targets: 0 }],
-        order: [1, 'asc'],
-        paging: true,
-        searching: true,
-        info: true,
-        autoWidth: true,
-        language: {
-          url: "../funciones/datatable-es.js",
-        },
-      });
+      initDT();
     })
-    .catch(() => Swal.fire("Error", "No se pudo cargar las comisiones", "error"));
+    .catch((err) => {
+      console.error("Error en cargarDetalle:", err);
+      Swal.fire("Error", "No se pudo cargar las comisiones", "error");
+    });
 }
 
-//Funciones de pago
+function initDT() {
+  $("#tablaDetalle").DataTable({
+    responsive: { details: { type: "column", target: 0 } },
+    columnDefs: [{ className: "dtr-control", orderable: true, targets: 0 }],
+    order: [1, "asc"],
+    paging: true,
+    searching: true,
+    info: true,
+    autoWidth: false,
+    language: { url: "../funciones/datatable-es.js" },
+  });
+}
+
+// Pagar 1
 function pagar(idComision) {
   Swal.fire({
     title: "¿Confirmas el pago?",
@@ -137,20 +141,26 @@ function pagar(idComision) {
     cancelButtonText: "Cancelar",
   }).then((res) => {
     if (!res.isConfirmed) return;
+
     fetch("../controllers/comisionesController.php", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ accion: "marcarPagada", idComision }),
     })
       .then((r) => r.json())
       .then((d) => {
         if (d.status === "ok") {
           Swal.fire({ icon: "success", title: "Pagada", timer: 1200, showConfirmButton: false });
-          cargarDetalle();
+          cargarDetalle(); // actualiza tarjeta + tabla
+        } else {
+          Swal.fire("Error", d.message || "No se pudo pagar", "error");
         }
-      });
+      })
+      .catch(() => Swal.fire("Error", "Error de conexión", "error"));
   });
 }
 
+// Adelantar
 function adelantar(idComision) {
   Swal.fire({
     title: "¿Adelantar comisión?",
@@ -161,8 +171,10 @@ function adelantar(idComision) {
     cancelButtonText: "Cancelar",
   }).then((res) => {
     if (!res.isConfirmed) return;
+
     fetch("../controllers/comisionesController.php", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ accion: "adelantarComision", idComision }),
     })
       .then((r) => r.json())
@@ -170,7 +182,42 @@ function adelantar(idComision) {
         if (d.status === "ok") {
           Swal.fire({ icon: "success", title: "Comisión adelantada", timer: 1200, showConfirmButton: false });
           cargarDetalle();
+        } else {
+          Swal.fire("Error", d.message || "No se pudo adelantar", "error");
         }
-      });
+      })
+      .catch(() => Swal.fire("Error", "Error de conexión", "error"));
+  });
+}
+
+// Pagar todo
+function pagarTodo() {
+  const idUsuario = window.__idUsuarioActivo;
+
+  Swal.fire({
+    title: "¿Pagar todas las comisiones pendientes?",
+    text: "Se marcarán como pagadas todas las comisiones NO pagadas.",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonText: "Sí, pagar todo",
+    cancelButtonText: "Cancelar",
+  }).then((res) => {
+    if (!res.isConfirmed) return;
+
+    fetch("../controllers/comisionesController.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ accion: "pagarTodoUsuario", idUsuario }),
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.status === "ok") {
+          Swal.fire({ icon: "success", title: "Listo", text: "Todas fueron marcadas como pagadas", timer: 1400, showConfirmButton: false });
+          cargarDetalle(); // tarjeta a 0 y tabla actualizada
+        } else {
+          Swal.fire("Error", d.message || "No se pudo pagar todo", "error");
+        }
+      })
+      .catch(() => Swal.fire("Error", "Error de conexión", "error"));
   });
 }

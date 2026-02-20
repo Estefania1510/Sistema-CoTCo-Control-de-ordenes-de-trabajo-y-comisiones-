@@ -73,7 +73,38 @@ fetch("../controllers/SoftwareCatalogo.php")
       }
     ],
     language: { url: "../funciones/datatable-es.js" }
+  }); //final table
+
+    // Tabla historial (licencias asignadas a órdenes)
+  const tablaOrden = $('#tablaLicenciasOrden').DataTable({
+    ajax: {
+      url: "../controllers/licenciasoftwareController.php",
+      type: "POST",
+      data: { accion: "listar_instaladas" },
+      dataSrc: ""
+    },
+    responsive: true,
+    columns: [
+      { data: "FolioOrden" },
+      { data: "Cliente", defaultContent: "—" },
+      { data: "Fecha", defaultContent: "—" },
+      { data: "Software", defaultContent: "—" },
+      { data: "Licencia", defaultContent: "—" },
+      { data: "Password", defaultContent: "—" },
+      { data: "Equipo", defaultContent: "—" },
+      { data: "Procesador", defaultContent: "—" },
+      { data: "IdDispositivo", defaultContent: "—" },
+      { data: "IdProducto", defaultContent: "—" }
+    ],
+    language: { url: "../funciones/datatable-es.js" }
   });
+
+  // Cuando se abre el acordeón, recarga el historial
+  document.getElementById('collapseHistorial')
+    .addEventListener('shown.bs.collapse', function () {
+      tablaOrden.ajax.reload(null, false);
+    });
+
 
   // Agregar o actualizar licencia 
   $('#btnAgregar').on('click', function () {

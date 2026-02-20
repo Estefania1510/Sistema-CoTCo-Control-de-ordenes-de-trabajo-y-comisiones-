@@ -1,6 +1,9 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
+    require_once __DIR__ . '/../../config/session_control.php';
+    date_default_timezone_set('America/Mexico_City');
+
 }
 
 if (!isset($_SESSION['idUsuario'])) {
@@ -99,12 +102,14 @@ $isTecnico   = in_array("tecnico", $rolesUsuario);
           <?php endif; ?>
 
           <!-- SOLO ADMIN -->
-          <?php if ($isAdmin): ?>
+          <?php if ($isAdmin || $isTecnico): ?>
           <a class="nav-link" href="licenciasoftware.php">
             <div class="sb-nav-link-icon"><i class="fa-solid fa-key" style="color: #ffffff;" ></i></div>
             Licencia Software
           </a>
+          <?php endif; ?>
 
+          <?php if ($isAdmin): ?>
           <a class="nav-link" href="usuarios.php">
             <div class="sb-nav-link-icon"><i class="fas fa-users" style="color: #ffffff;"></i></div>
             Administración de Usuarios

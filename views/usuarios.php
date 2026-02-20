@@ -7,15 +7,16 @@ $conexion = new Conexion($conData);
 $conn = $conexion->getConnection();
 
 // Validar rol administrador
-if (!in_array('administrador', $_SESSION['roles'] ?? [])) {
-  header('Location: ../index.php');
-  exit;
-}
+// if (!in_array('administrador', $_SESSION['roles'] ?? [])) {
+//   header('Location: ../index.php');
+//   exit;
+// }
 
 //CONSULTA DE USUARIOS Y ROLES 
 $sql = "SELECT 
             u.idUsuario, 
             u.NombreUsuario, 
+            u.FechaNacimiento,
             u.Usuario, 
             GROUP_CONCAT(r.rol ORDER BY r.rol SEPARATOR ', ') AS Roles,
             u.Estatus
@@ -74,6 +75,7 @@ $roles = $conn->query("SELECT rol FROM rol WHERE estatus='Activo'")->fetchAll(PD
             <th></th>
             <th>Nombre</th>
             <th>Usuario</th>
+            <th>Fecha Nacimiento</th>
             <th>Rol</th>
             <th>Estatus</th>
             <th>Acciones</th>
@@ -85,6 +87,7 @@ $roles = $conn->query("SELECT rol FROM rol WHERE estatus='Activo'")->fetchAll(PD
               <td></td>
               <td><?= htmlspecialchars($u['NombreUsuario']) ?></td>
               <td><?= htmlspecialchars($u['Usuario']) ?></td>
+              <td><?= htmlspecialchars($u['FechaNacimiento'] ?? '') ?></td>
               <td><?= htmlspecialchars(ucwords($u['Roles'])) ?></td>
               <td>
                 <span class="badge <?= $u['Estatus'] === 'Activo' ? 'bg-success' : 'bg-danger' ?>">
@@ -131,6 +134,12 @@ $roles = $conn->query("SELECT rol FROM rol WHERE estatus='Activo'")->fetchAll(PD
             <label class="form-label">Nombre completo</label>
             <input type="text" name="NombreUsuario" id="NombreUsuario" class="form-control" required>
           </div>
+
+          <div class="mb-3">
+            <label class="form-label">Fecha de nacimiento</label>
+               <input type="date" name="FechaNacimiento" id="FechaNacimiento" class="form-control" required>
+          </div>
+
           <div class="mb-3">
             <label class="form-label">Usuario</label>
             <input type="text" name="Usuario" id="Usuario" class="form-control" required>

@@ -13,7 +13,7 @@ if (!$id) {
 }
 
 try {
-		$sql = "SELECT u.idUsuario, u.NombreUsuario, u.Usuario, GROUP_CONCAT(r.rol) AS Roles
+		$sql = "SELECT u.idUsuario, u.NombreUsuario, u.FechaNacimiento, u.Usuario, GROUP_CONCAT(r.rol) AS Roles
 		        FROM usuario u
 		        INNER JOIN usuarioroles ur ON u.idUsuario = ur.idUsuario
 		        INNER JOIN rol r ON ur.idRol = r.idRol

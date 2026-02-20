@@ -56,6 +56,17 @@
     </div>
   </div>
 
+      <!-- Trabajo -->
+    <div class="card mb-4">
+      <div class="card-body">
+        <h5 class="mb-3"><i class="fas fa-tag me-2"></i> Trabajo</h5>
+        <label class="form-label">Trabajo</label>
+        <input type="text" name="trabajo" id="trabajo" class="form-control" maxlength="120"
+               placeholder="Ej: Formateo Laptop Juan / Mantenimiento PC Oficina" required>
+        <small class="text-muted">Descripción corta para identificar rápido la orden.</small>
+      </div>
+    </div>
+
   <!-- DATOS DEL EQUIPO-->
   <div class="card mb-4">
     <div class="card-body row g-3">
@@ -140,6 +151,29 @@
               </button>
             </div>
         </div>
+        </div>
+        </div>
+
+          <!-- BLOQUE MANUAL-->
+      <!-- BLOQUE MANUAL (siempre visible) -->
+      <div class="card-body pt-0">
+        <h6 class="fw-bold mb-2">Agregar servicio manual</h6>
+        <div class="row g-3 align-items-end">
+          <div class="col-md-10">
+            <label class="form-label fw-bold">Concepto</label>
+            <input type="text" id="servicioManual" class="form-control"
+                   placeholder="Ej: Disco duro 1TB / RAM 16GB / Mano de obra">
+          </div>
+
+          <div class="col-md-2 d-flex gap-2">
+            <button type="button" id="btnAgregarManual" class="btn btn-outline-primary btn-sm w-100">
+              Agregar manual
+            </button>
+          </div>
+        </div>
+      </div>
+
+
 
         <!-- TABLA DE SERVICIOS -->
         <div class="card-body">
@@ -149,6 +183,7 @@
                 <th></th> 
                 <th>Tipo</th>
                 <th>Servicio</th>
+                <th>Cantidad</th>
                 <th>Precio</th>
                 <th>Acción</th>
               </tr>
@@ -158,8 +193,8 @@
             </tbody>
           </table>
         </div>
-      </div>
-    </div>
+      
+    
 
   <!-- COSTOS  -->
     <div class="card-body">
@@ -178,7 +213,7 @@
           <input type="number" step="0.01" id="resto" name="resto" class="form-control"  value="0.00" readonly>
         </div>
       </div>
-      <div class="col-md-12">
+       <div class="col-md-12">
         <div class="form-check">
           <input class="form-check-input" type="checkbox" name="cotizacionPendiente" id="cotizacionPendiente">
           <label class="form-check-label form-check-label fw-semibold text-danger" for="cotizacionPendiente">Cotización pendiente</label>
@@ -186,7 +221,7 @@
         <div id="msgPendiente" class="text-muted mt-1 " style="display:none; font-size: 0.9em;">
                Los importes se llenarán cuando se haga la cotización.
       </div>
-      </div>
+      </div> 
     </div>
   </div>
 
@@ -204,7 +239,7 @@
         <div class="col-md-6">
           <label class="form-label">Técnico asignado</label>
           <select id="tecnico" class="form-select">
-            <option value="">En espera</option>
+            <option value="">Tecnico no asignado</option>
             <?php foreach ($tecnicos as $t): ?>
             <option value="<?= $t['idUsuario'] ?>"><?= htmlspecialchars($t['NombreUsuario']) ?></option>
             <?php endforeach; ?>
@@ -226,26 +261,32 @@
      
       <!--  GUARDAR -->
     <script src="../funciones/alertas.js"></script>
+    <script src="../funciones/mantenimientoorden.js"></script>
+    <script src="../funciones/whatsappFlow.js?v=3"></script>
+
+
     <script>
     document.getElementById("formMantenimiento").addEventListener("submit", async (e) => {
       e.preventDefault();
 
       const descProblema = $("#descProblema").val().trim();
-      let filasCatalogo = 0;
+
+      let filas = 0;
       if ($.fn.DataTable && $.fn.DataTable.isDataTable('#tablaMnt')) {
-        filasCatalogo = $('#tablaMnt').DataTable().rows().count();
+        filas = $('#tablaMnt').DataTable().rows().count();
       } else {
-        filasCatalogo = $("#tablaMnt tbody tr").length;
+        filas = $("#tablaMnt tbody tr").length;
       }
 
-      if (descProblema === "" && filasCatalogo === 0) {
+      if (descProblema === "" && filas === 0) {
         Swal.fire({
           icon: 'warning',
           title: 'Datos incompletos',
-          text: 'Debes agregar una descripción del problema o al menos un servicio del catálogo.',
+          text: 'Debes agregar una descripción del problema o al menos un concepto (catálogo o manual).',
         });
-        return; 
+        return;
       }
+
 
       const formData = new FormData(e.target);
       formData.append("idUsuario", <?= $_SESSION['idUsuario'] ?>);
@@ -259,42 +300,60 @@
 
         const data = await res.json();
 
-        if (data.status === "success") {
-          alertaGuardadoExito(data.idNota);
-          e.target.reset();
-          $('#bloqueCatalogo').slideUp();
-          $('#agregarProblema').prop('checked', false);
-          $('#tipoServicio').val('');
-          $('#servicioCatalogo').val('');
-          if ($.fn.DataTable && $.fn.DataTable.isDataTable('#tablaMnt')) {
-            $('#tablaMnt').DataTable().clear().draw();
-          }
 
-          $.ajax({
-            url: "../controllers/obtenerFolio.php",
-            method: "GET",
-            dataType: "json",
-            success: function (dataFolio) {
-              $("#folio").text(dataFolio.folio);
-            }
-          });
+    if (data.status === "success") {
 
-          setTimeout(() => {
-            window.open(`../controllers/TicketMantenimiento.php?idNota=${data.idNota}`, "_blank");
-          }, 1600);
-        } else {
-          alertaError(data.error || data.message);
+      const idNota = data.idNota;
+
+      // IMPORTANTÍSIMO: tomar teléfonos ANTES del reset
+      const tel1Raw = ($("#telefono").val() || "").trim();
+      const tel2Raw = ($("#telefono2").val() || "").trim();
+
+      await flujoGuardadoConAcciones({
+        idNota,
+        tel1Raw,
+        tel2Raw,
+        ticketUrl: `../controllers/TicketMantenimiento.php?idNota=${idNota}`,
+        whatsEndpointUrl: `../controllers/WhatsAppTicketMantenimiento.php`
+
+      });
+
+      // ya luego limpias
+      e.target.reset();
+      $('#bloqueCatalogo').slideUp();
+      $('#agregarProblema').prop('checked', false);
+      $('#tipoServicio').val('');
+      $('#servicioCatalogo').val('');
+
+      if ($.fn.DataTable && $.fn.DataTable.isDataTable('#tablaMnt')) {
+        $('#tablaMnt').DataTable().clear().draw();
+      }
+
+      $.ajax({
+        url: "../controllers/obtenerFolio.php",
+        method: "GET",
+        dataType: "json",
+        success: function (dataFolio) {
+          $("#folio").text(dataFolio.folio);
         }
-      } catch (err) {
+      });
+
+    } else {
+      alertaError(data.error || data.message);
+    }
+
+          } catch (err) {
         alertaError(err.message);
       }
     });
     </script>
 </form>
 
-<?php include 'includes/footer.php'; ?>
 
-<script src="../funciones/mantenimientoorden.js"></script>
+
+
+
+<?php include 'includes/footer.php'; ?>
 
 
 

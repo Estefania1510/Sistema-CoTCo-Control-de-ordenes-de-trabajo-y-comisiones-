@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../config/Conexion.php';
 require_once __DIR__ . '/../config/ConnectData.php';
 session_start();
+require_once __DIR__ . '/../config/session_control.php';
 
 $conexion = new Conexion($conData);
 $conn = $conexion->getConnection();
@@ -54,7 +55,30 @@ switch ($accion) {
     echo json_encode(["status" => "success"]);
     break;
 
+    case 'listar_instaladas':
+  $stmt = $conn->query("
+    SELECT
+      n.idNota AS FolioOrden,
+      c.NombreCliente AS Cliente,
+      COALESCE(ls.Fecha, n.FechaRecepcion) AS Fecha,
+      ls.Software,
+      ls.Licencia,
+      ls.Password,
+      ls.Equipo,
+      ls.Procesador,
+      ls.IdDispositivo,
+      ls.IdProducto
+    FROM licenciasoftware ls
+    LEFT JOIN nota n ON n.idNota = ls.idNota
+    LEFT JOIN cliente c ON c.idCliente = n.idCliente
+    WHERE ls.idNota IS NOT NULL
+    ORDER BY n.idNota DESC, ls.idLS DESC
+  ");
+  echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
+  break;
+
   default:
     echo json_encode(["status" => "error", "message" => "Acción no reconocida"]);
     break;
+
 }

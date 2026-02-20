@@ -31,6 +31,17 @@
       </div>
     </div>
 
+        <!-- Listas para Entrega -->
+    <div class="col-md-4">
+      <div class="card mb-4 border-0 shadow-sm" style="background-color:#e6f0ff; color:#003366; cursor:pointer;"
+           onclick="window.location.href='ordenestrabajo.php?estado=ListoEntregar'">
+        <div class="card-body">
+          <h5 class="card-title">Listo para Entregar</h5>
+          <p class="display-6 fw-bold mb-0" id="countListoEntregar">0</p>
+        </div>
+      </div>
+    </div>
+
     <!-- Entregadas -->
     <div class="col-md-4">
       <div class="card mb-4 border-0 shadow-sm" style="background-color:#e6ffee; color:#004d26; cursor:pointer;"
@@ -79,6 +90,45 @@
     </div>
   </div>
 
+     <!-- Boton para cumpleaños -->
+<style>
+  /* Icono animado (rebote + giro suave) */
+  @keyframes party-bounce {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-4px) rotate(-8deg); }
+  }
+  .party-icon {
+    display: inline-block;
+    animation: party-bounce 0.9s ease-in-out infinite;
+  }
+</style>
+
+<div id="btnCumpleWrap" class="mb-3" style="display:none;">
+  <button class="btn btn-outline-danger fw-bold shadow-sm d-inline-flex align-items-center gap-2" id="btnCumple">
+    <span class="party-icon">🎉</span>
+    Volver a celebrar
+  </button>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.esCumpleHoy) {
+    document.getElementById('btnCumpleWrap').style.display = 'block';
+  }
+
+  const btn = document.getElementById('btnCumple');
+  if (btn) {
+    btn.addEventListener('click', () => {
+      if (typeof window.runBirthdayCelebration === 'function') {
+        window.runBirthdayCelebration();
+      }
+    });
+  }
+});
+</script>
+
+
+</script>
   <script>
 document.addEventListener("DOMContentLoaded", () => {
   fetch("../controllers/contarOrdenes.php")
@@ -86,6 +136,7 @@ document.addEventListener("DOMContentLoaded", () => {
     .then(data => {
       document.getElementById("countProceso").textContent = data.Proceso ?? 0;
       document.getElementById("countTequila").textContent = data.EnviadoTequila ?? 0;
+      document.getElementById("countListoEntregar").textContent = data.ListoEntregar ?? 0;
       document.getElementById("countEntregado").textContent = data.Entregado ?? 0;
       document.getElementById("countRetrasado").textContent = data.Retrasado ?? 0;
       document.getElementById("countCancelado").textContent = data.Cancelado ?? 0;

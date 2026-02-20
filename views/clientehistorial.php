@@ -48,15 +48,15 @@ if (!$cliente) {
     <div class="card-body row g-3">
       <div class="col-md-4">
         <label class="form-label fw-bold">Teléfono</label>
-        <input type="text" class="form-control" value="<?= htmlspecialchars($cliente['Telefono']) ?>" readonly>
+        <input type="text" class="form-control" value="<?= htmlspecialchars($cliente['Telefono']) ?>" disabled >
       </div>
       <div class="col-md-4">
         <label class="form-label fw-bold">Teléfono 2</label>
-        <input type="text" class="form-control" value="<?= htmlspecialchars($cliente['Telefono2'] ?? '') ?>" readonly>
+        <input type="text" class="form-control" value="<?= htmlspecialchars($cliente['Telefono2'] ?? '') ?>" disabled>
       </div>
       <div class="col-md-4">
         <label class="form-label fw-bold">Dirección</label>
-        <input type="text" class="form-control" value="<?= htmlspecialchars($cliente['Direccion']) ?>" readonly>
+        <input type="text" class="form-control" value="<?= htmlspecialchars($cliente['Direccion']) ?>" disabled>
       </div>
     </div>
   </div>

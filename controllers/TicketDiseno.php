@@ -13,7 +13,7 @@ if (!$idNota) {
 
 // CONSULTAS
 $sql = "SELECT n.idNota, DATE_FORMAT(n.FechaRecepcion, '%d-%m-%Y') AS FechaRecepcion,
-               n.Total, n.Anticipo, n.Resto, n.Descripcion,
+               n.Trabajo, n.Total, n.Anticipo, n.Resto,
                n.Comentario, c.NombreCliente, c.Telefono, c.Telefono2, c.Direccion,
                u.NombreUsuario AS RecepcionadoPor
         FROM nota n
@@ -25,7 +25,7 @@ $stmt->execute([$idNota]);
 $nota = $stmt->fetch(PDO::FETCH_ASSOC);
 
 
-$sqlDis = "SELECT idDiseño, estatus, idDiseñador, CostoDiseño 
+$sqlDis = "SELECT idDiseño, estatus, idDiseñador, CostoDiseño, EsDigital, MedioEntrega
            FROM notadiseño 
            WHERE idNota = ?";
 $stmt = $conn->prepare($sqlDis);
@@ -38,6 +38,12 @@ $sqlMat = "SELECT Material, Cantidad, Precio, Subtotal
 $stmt = $conn->prepare($sqlMat);
 $stmt->execute([$diseno['idDiseño']]);
 $materiales = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$materiales = array_filter($materiales, function($m){
+  return trim($m['Material'] ?? '') !== '';
+});
+$materiales = array_values($materiales);
+
 
 //  PDF 
 $pdf = new tFPDF('P','mm',[80,297]);
@@ -115,15 +121,46 @@ $pdf->MultiCell(0,4,$nota['Direccion']);
 $pdf->Ln(2);
 
 // Descripción
+// $pdf->SetFont('DejaVu','B',8.5);
+// $pdf->SetX($margenIzq);
+// $pdf->Cell(0,5,'Descripción:',0,1);
+
+// $pdf->SetFont('DejaVu','',8.5);
+// $pdf->SetX($margenIzq);
+// $pdf->MultiCell(0,4,$nota['Descripcion']);
+
+// $pdf->Ln(2);
+
+// Trabajo
 $pdf->SetFont('DejaVu','B',8.5);
 $pdf->SetX($margenIzq);
-$pdf->Cell(0,5,'Descripción:',0,1);
+$pdf->Cell(0,5,'Trabajo:',0,1);
 
 $pdf->SetFont('DejaVu','',8.5);
 $pdf->SetX($margenIzq);
-$pdf->MultiCell(0,4,$nota['Descripcion']);
+$pdf->MultiCell(0,4,trim($nota['Trabajo'] ?? ''));
 
 $pdf->Ln(2);
+
+// Tipo de trabajo (Digital / No digital)
+$esDigital = ((int)($diseno['EsDigital'] ?? 0) === 1);
+$medioEntrega = trim($diseno['MedioEntrega'] ?? '');
+
+$pdf->SetFont('DejaVu','B',8.5);
+$pdf->SetX($margenIzq);
+$pdf->Cell(0,5,'Tipo:',0,1);
+
+$pdf->SetFont('DejaVu','',8.5);
+$pdf->SetX($margenIzq);
+$pdf->Cell(0,4, $esDigital ? 'Trabajo digital' : 'Trabajo fisico',0,1);
+
+if ($esDigital && $medioEntrega !== '') {
+    $pdf->SetX($margenIzq);
+    $pdf->Cell(0,4,'Medio de entrega: '.$medioEntrega,0,1);
+}
+
+$pdf->Ln(2);
+
 
 // Comentarios
 if (!empty($nota['Comentario'])) {
@@ -178,48 +215,83 @@ if ($materiales) {
     $pdf->Ln(2);
 }
 
-// ================= COSTOS (ALINEADOS CON TABLA) =================
-$pdf->Ln(1);
-$pdf->Cell(0,0,str_repeat('-',32),0,1,'C');
-$pdf->Ln(3);
+$totalNum    = (float)$nota['Total'];
+$anticipoNum = (float)$nota['Anticipo'];
+$restoNum    = (float)$nota['Resto'];
 
-$margenIzq = 5.5;
-$anchoTexto = 48;   // Material + Cant
-$anchoTotal = 18;   // MISMO ancho que columna Total
+// regla: si total y resto están en 0 => cotización pendiente
+$esCotPendiente = ($totalNum == 0 && $restoNum == 0);
 
-$pdf->SetFont('DejaVu','',8.5);
+// ================= COSTOS / PAGOS =================
+    $totalNum    = (float)$nota['Total'];
+    $anticipoNum = (float)$nota['Anticipo'];
+    $restoNum    = (float)$nota['Resto'];
 
-// Costo Diseño
-if (!empty($diseno['CostoDiseño'])) {
-    $pdf->SetX($margenIzq);
-    $pdf->Cell($anchoTexto,4,'Costo Diseño:',0,0);
-    $pdf->Cell($anchoTotal,4,'$'.number_format($diseno['CostoDiseño'],2),0,1,'R');
+    // regla: si total y resto están en 0 => cotización pendiente
+    $esCotPendiente = ($totalNum == 0 && $restoNum == 0);
+
     $pdf->Ln(1);
-}
+    $pdf->Cell(0,0,str_repeat('-',32),0,1,'C');
+    $pdf->Ln(3);
 
-// Total
-$pdf->SetFont('DejaVu','B',8.5);   // 👉 activar negrita
-$pdf->SetX($margenIzq);
-$pdf->Cell($anchoTexto,4,'Total:',0,0);
-$pdf->Cell($anchoTotal,4,'$'.number_format($nota['Total'],2),0,1,'R');
-$pdf->Ln(1);
-$pdf->SetFont('DejaVu','',8.5);    // 👉 regresar a normal
+    $margenIzq   = 5.5;
+    $anchoTexto  = 48;
+    $anchoTotal  = 18;
 
-$pdf->Ln(2.5); // 👈 espacio extra entre costos y pagos
+    // ---- SI ES COTIZACIÓN PENDIENTE ----
+    if ($esCotPendiente) {
 
+        // Si dejó anticipo, mostrarlo
+        if ($anticipoNum > 0) {
+            $pdf->SetFont('DejaVu','',8.5);
+            $pdf->SetX($margenIzq);
+            $pdf->Cell($anchoTexto,4,'Anticipo:',0,0);
+            $pdf->Cell($anchoTotal,4,'$'.number_format($anticipoNum,2),0,1,'R');
+            $pdf->Ln(2);
+        }
 
-// Anticipo
-$pdf->SetX($margenIzq);
-$pdf->Cell($anchoTexto,4,'Anticipo:',0,0);
-$pdf->Cell($anchoTotal,4,'$'.number_format($nota['Anticipo'],2),0,1,'R');
-$pdf->Ln(1);
+        // Leyenda centrada
+        $pdf->SetFont('DejaVu','B',9);
+        $pdf->Cell(0,5,'*** COTIZACION PENDIENTE ***',0,1,'C');
+        $pdf->SetFont('DejaVu','',8.5);
 
-// Restante
-$pdf->SetFont('DejaVu','B',8.5); // destacar restante
-$pdf->SetX($margenIzq);
-$pdf->Cell($anchoTexto,4,'Restante:',0,0);
-$pdf->Cell($anchoTotal,4,'$'.number_format($nota['Resto'],2),0,1,'R');
-$pdf->SetFont('DejaVu','B',8.5);
+    } else {
+
+        // ---- NORMAL (NO PENDIENTE) ----
+
+        // Costo Diseño (opcional)
+        if (!empty($diseno['CostoDiseño'])) {
+            $pdf->SetFont('DejaVu','',8.5);
+            $pdf->SetX($margenIzq);
+            $pdf->Cell($anchoTexto,4,'Costo Diseño:',0,0);
+            $pdf->Cell($anchoTotal,4,'$'.number_format((float)$diseno['CostoDiseño'],2),0,1,'R');
+            $pdf->Ln(1);
+        }
+
+        // Total (siempre)
+        $pdf->SetFont('DejaVu','B',8.5);
+        $pdf->SetX($margenIzq);
+        $pdf->Cell($anchoTexto,4,'Total:',0,0);
+        $pdf->Cell($anchoTotal,4,'$'.number_format($totalNum,2),0,1,'R');
+        $pdf->Ln(2);
+
+        // Anticipo SOLO si > 0
+        if ($anticipoNum > 0) {
+            $pdf->SetFont('DejaVu','',8.5);
+            $pdf->SetX($margenIzq);
+            $pdf->Cell($anchoTexto,4,'Anticipo:',0,0);
+            $pdf->Cell($anchoTotal,4,'$'.number_format($anticipoNum,2),0,1,'R');
+            $pdf->Ln(1);
+        }
+
+        // Restante (puede ser negativo)
+        $pdf->SetFont('DejaVu','B',8.5);
+        $pdf->SetX($margenIzq);
+        $pdf->Cell($anchoTexto,4,'Restante:',0,0);
+        $pdf->Cell($anchoTotal,4,'$'.number_format($restoNum,2),0,1,'R');
+        $pdf->SetFont('DejaVu','',8.5);
+    }
+
 
 
 

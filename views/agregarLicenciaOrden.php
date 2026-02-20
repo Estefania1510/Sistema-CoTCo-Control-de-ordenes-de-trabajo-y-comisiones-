@@ -4,11 +4,15 @@ require_once __DIR__ . '/../config/Conexion.php';
 require_once __DIR__ . '/../config/ConnectData.php';
  
 // Solo administradora
-if (!in_array('administrador', $_SESSION['roles'] ?? [])) {
+$roles = $_SESSION['roles'] ?? [];
+$rolesPermitidos = ['administrador', 'tecnico'];
+
+if (empty(array_intersect($rolesPermitidos, $roles))) {
   echo "<div class='alert alert-danger m-4'>No tienes permisos para acceder a esta sección.</div>";
   include 'includes/footer.php';
   exit;
 }
+
 
 $idNota = $_GET['idNota'] ?? null;
 if (!$idNota) {

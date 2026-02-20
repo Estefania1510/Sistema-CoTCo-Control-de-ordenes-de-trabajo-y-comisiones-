@@ -9,10 +9,11 @@ $conn = $conexion->getConnection();
 $idNota = $_GET['id'] ?? null;
 
 $sql = "SELECT 
-          n.idNota, n.FechaRecepcion, n.FechaEntrega, n.Total, n.Anticipo, n.Resto,
+          n.idNota, n.Trabajo, n.FechaRecepcion, n.FechaEntrega, n.Total, n.Anticipo, n.Resto,
           n.Descripcion, n.Comentario, c.NombreCliente, c.Direccion, c.Telefono, c.Telefono2,
           u.NombreUsuario AS RecepcionadoPor,
-          d.idDiseño, d.estatus, d.CostoDiseño, d.idDiseñador
+          d.idDiseño, d.estatus, d.CostoDiseño, d.idDiseñador,
+          d.EsDigital, d.MedioEntrega
         FROM nota n
         INNER JOIN cliente c ON n.idCliente = c.idCliente
         INNER JOIN usuario u ON n.idUsuario = u.idUsuario
@@ -47,12 +48,12 @@ $materiales = $stmt3->fetchAll(PDO::FETCH_ASSOC);
 $idUsuario = $_SESSION['idUsuario'];
 $roles = $_SESSION['roles'] ?? [];
 $rol = implode(',', $roles); 
-$puedeEditar = in_array($rol, ['administrador', 'encargado']) || ($rol == 'diseñador' && $orden['idDiseñador'] == $idUsuario);
+$puedeEditar = true;
 $puedeCambiarDiseñador = in_array('administrador', $roles) || in_array('encargado', $roles);
 ?>
     <div class="d-flex justify-content-between align-items-end mt-2">
       <h1 class="mt-2 text-dark fw-bold mb-0">Editar Orden de Diseño</h1>
-      <span class="badge bg-success fs-5 me-5" style="min-width: 130px; font-size: 1.1rem;">Folio: <?= $orden['idNota'] ?></span>
+      <span class="badge bg-warning text-dark fs-5 me-5" style="min-width: 130px; font-size: 1.1rem;">Folio: <?= $orden['idNota'] ?></span>
     </div>
     <ol class="breadcrumb mb-4">
       <li class="breadcrumb-item active"></li>
@@ -64,28 +65,90 @@ $puedeCambiarDiseñador = in_array('administrador', $roles) || in_array('encarga
   <input type="hidden" name="idDiseño" value="<?= $orden['idDiseño'] ?>">
   <input type="hidden" name="idDiseñadorOriginal" value="<?= $orden['idDiseñador'] ?>">
 
+  <input type="hidden" id="wa_cliente" value="<?= htmlspecialchars($orden['NombreCliente'] ?? '') ?>">
+  <input type="hidden" id="wa_tel1" value="<?= htmlspecialchars($orden['Telefono'] ?? '') ?>">
+  <input type="hidden" id="wa_tel2" value="<?= htmlspecialchars($orden['Telefono2'] ?? '') ?>">
+
+    <!-- Botones para Whats -->
+  <div class="d-flex justify-content-end gap-2 mb-3 flex-wrap">
+    <button type="button" class="btn btn-success btn-lg fw-bold px-4" id="btnWhatsAvisar">
+      <i class="fa-brands fa-whatsapp me-2"></i> Avisar por WhatsApp
+    </button>
+
+    <button type="button" class="btn btn-outline-success btn-lg fw-bold px-4" id="btnWhatsChat">
+      <i class="fa-brands fa-whatsapp me-2"></i> Abrir chat
+    </button>
+  </div>
+
   <!-- Cliente -->
   <div class="card mb-4">
     <div class="card-body row g-3">
       <h5 class="mb-3"><i class="fas fa-user me-2"></i> Datos del Cliente</h5>
+
+
+
       <div class="col-md-6">
         <label class="form-label">Nombre del Cliente</label>
-        <input type="text" value="<?= htmlspecialchars($orden['NombreCliente']) ?>" class="form-control" readonly>
+        <input type="text" value="<?= htmlspecialchars($orden['NombreCliente']) ?>" class="form-control" disabled>
       </div>
       <div class="col-md-3">
         <label class="form-label">Teléfono</label>
-        <input type="text" value="<?= htmlspecialchars($orden['Telefono']) ?>" class="form-control" readonly>
+        <input type="text" value="<?= htmlspecialchars($orden['Telefono']) ?>" class="form-control" disabled>
       </div>
       <div class="col-md-3">
         <label class="form-label">Teléfono 2</label>
-        <input type="text" value="<?= htmlspecialchars($orden['Telefono2']) ?>" class="form-control" readonly>
+        <input type="text" value="<?= htmlspecialchars($orden['Telefono2']) ?>" class="form-control" disabled>
       </div>
       <div class="col-md-12">
         <label class="form-label">Dirección</label>
-        <input type="text" value="<?= htmlspecialchars($orden['Direccion']) ?>" class="form-control" readonly>
+        <input type="text" value="<?= htmlspecialchars($orden['Direccion']) ?>" class="form-control" disabled>
       </div>
     </div>
   </div>
+
+    <!-- Trabajo -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <h5 class="mb-3"><i class="fas fa-tag me-2"></i> Trabajo</h5>
+      <label class="form-label">Trabajo</label>
+      <input type="text" name="trabajo" class="form-control"
+             value="<?= htmlspecialchars($orden['Trabajo'] ?? '') ?>"
+             maxlength="120" required>
+    </div>
+  </div>
+
+  <!-- TIPO DE DISEÑO -->
+  <div class="card mb-4">
+    <div class="card-body row g-3">
+      <h5 class="mb-3"><i class="fas fa-globe me-2"></i> Tipo de Diseño</h5>
+
+      <div class="col-md-12">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="esDigital" name="esDigital"
+                 <?= ((int)$orden['EsDigital'] === 1) ? 'checked' : '' ?>>
+          <label class="form-check-label fw-semibold" for="esDigital">
+            Diseño digital
+          </label>
+        </div>
+      </div>
+
+      <div id="bloqueEntrega" class="row g-3 mt-1" style="display:none;">
+        <div class="col-md-4">
+          <label class="form-label">Medio de entrega</label>
+          <select class="form-select" name="medioEntrega" id="medioEntrega">
+            <?php $medio = $orden['MedioEntrega'] ?? ''; ?>
+            <option value="" <?= ($medio === '' || $medio === null) ? 'selected' : '' ?>>Selecciona</option>
+            <option value="WhatsApp" <?= ($medio === 'WhatsApp') ? 'selected' : '' ?>>WhatsApp</option>
+            <option value="Correo"   <?= ($medio === 'Correo') ? 'selected' : '' ?>>Correo</option>
+            <option value="Drive"    <?= ($medio === 'Drive') ? 'selected' : '' ?>>Drive</option>
+            <option value="Otro"     <?= ($medio === 'Otro') ? 'selected' : '' ?>>Otro</option>
+          </select>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
 
   <!-- Descripcion -->
   <div class="card mb-4">
@@ -126,40 +189,32 @@ $puedeCambiarDiseñador = in_array('administrador', $roles) || in_array('encarga
           </tr>
         </thead>
         <tbody>
-            <?php 
-            $bloquearCampos = !(
-              str_contains($rol, 'administrador') || 
-              str_contains($rol, 'encargado')
-            );
-            ?>
+          <?php $bloquearCampos = false; ?>
 
+          <?php if (!empty($materiales)): ?>
             <?php foreach ($materiales as $m): ?>
+              <tr>
+                <td></td>
+                <td><input type="text" name="material[]" class="form-control"
+                      value="<?= htmlspecialchars($m['Material']) ?>" <?= $bloquearCampos ? 'readonly' : '' ?>></td>
+                <td><input type="text" name="cantidad[]" class="form-control"
+                      value="<?= $m['Cantidad'] ?>" <?= $bloquearCampos ? 'readonly' : '' ?>></td>
+                <td><input type="text" name="precio[]" class="form-control"
+                      value="<?= $m['Precio'] ?>" <?= $bloquearCampos ? 'readonly' : '' ?>></td>
+                <td><button type="button" class="btn btn-danger btn-sm fa-solid fa-trash-can" data-del="row"></button></td>
+              </tr>
+            <?php endforeach; ?>
+          <?php else: ?>
             <tr>
               <td></td>
-              <td>
-                <input type="text" name="material[]" class="form-control" 
-                       value="<?= htmlspecialchars($m['Material']) ?>"
-                       <?= $bloquearCampos ? 'readonly' : '' ?>>
-              </td>
-              <td>
-                <input type="text" name="cantidad[]" class="form-control"
-                       value="<?= $m['Cantidad'] ?>"
-                       <?= $bloquearCampos ? 'readonly' : '' ?>>
-              </td>
-              <td>
-                <input type="text" name="precio[]" class="form-control"
-                       value="<?= $m['Precio'] ?>"
-                       <?= $bloquearCampos ? 'readonly' : '' ?>>
-              </td>
-              <td>
-              
-                  <button type="button" class="btn btn-danger btn-sm fa-solid fa-trash-can" data-del="row"> </button>
-              
-              </td>
+              <td><input type="text" name="material[]" class="form-control" value=""></td>
+              <td><input type="text" name="cantidad[]" class="form-control" value=""></td>
+              <td><input type="text" name="precio[]" class="form-control" value=""></td>
+              <td><button type="button" class="btn btn-danger btn-sm fa-solid fa-trash-can" data-del="row"></button></td>
             </tr>
-            <?php endforeach; ?>
-            
+          <?php endif; ?>
         </tbody>
+
       </table>
       <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="addRow">Agregar Material</button>
     </div>
@@ -196,6 +251,8 @@ $puedeCambiarDiseñador = in_array('administrador', $roles) || in_array('encarga
         <label class="form-label">Comentarios</label>
         <input type="text" name="comentarios" class="form-control" value="<?= htmlspecialchars($orden['Comentario']) ?>">
       </div>
+      <div class="col-md-12 mt-2">
+      </div>
     </div>
   </div>
 
@@ -206,7 +263,7 @@ $puedeCambiarDiseñador = in_array('administrador', $roles) || in_array('encarga
         <label class="form-label">Estatus</label>
         <select name="estatus" id="estatus" class="form-select">
           <?php
-            $estatuses = ['Proceso', 'EnviadoTequila', 'Avisado', 'Entregado', 'Cancelado'];
+            $estatuses = ['Proceso','Enviado a Tequila','Listo para Entrega','Cliente Avisado','Entregado','Cancelado','Retrasado'];
             foreach ($estatuses as $e) {
               $selected = $orden['estatus'] == $e ? 'selected' : '';
               echo "<option value='$e' $selected>$e</option>";
@@ -222,7 +279,7 @@ $puedeCambiarDiseñador = in_array('administrador', $roles) || in_array('encarga
       <div class="col-md-4">
         <label class="form-label">Diseñador</label>
         <select name="idDiseñador" class="form-select" <?= !$puedeCambiarDiseñador ? 'disabled' : '' ?>>
-          <option value="">En espera</option>
+          <option value="">Diseñador no asignado</option>
           <?php foreach ($diseñadores as $d): ?>
             <option value="<?= $d['idUsuario'] ?>" <?= $orden['idDiseñador'] == $d['idUsuario'] ? 'selected' : '' ?>>
               <?= htmlspecialchars($d['NombreUsuario']) ?>
@@ -235,7 +292,7 @@ $puedeCambiarDiseñador = in_array('administrador', $roles) || in_array('encarga
 
   <!-- Botones -->
       <div class="text-center mb-5">
-        <button type="submit" class="btn btn-success btn-lg fw-bold px-4">
+        <button type="submit" class="btn btn-primary btn-lg fw-bold px-4">
           <i class="bi bi-save"></i> Guardar Cambios
         </button>
         <button type="button" class="btn btn-danger btn-lg fw-bold px-4" onclick="history.back()">
@@ -249,6 +306,27 @@ $puedeCambiarDiseñador = in_array('administrador', $roles) || in_array('encarga
   const rolUsuario = "<?= $rol ?>";
 </script>
 <script src="../funciones/editardiseño.js"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  function toggleBloqueEntrega() {
+    const esDigital = document.getElementById("esDigital")?.checked;
+    const bloque = document.getElementById("bloqueEntrega");
+    const medio = document.getElementById("medioEntrega");
+
+    if (!bloque) return;
+
+    bloque.style.display = esDigital ? "flex" : "none";
+
+    // Si se desmarca "digital", limpia medio de entrega
+    if (!esDigital && medio) medio.value = "";
+  }
+
+  document.getElementById("esDigital")?.addEventListener("change", toggleBloqueEntrega);
+  toggleBloqueEntrega(); // al cargar
+});
+</script>
+
 <script>
 document.addEventListener("DOMContentLoaded", function() {
   const estatusSelect = document.getElementById("estatus");

@@ -79,15 +79,31 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const fila = `
-      <tr>
-        <td></td>
-        <td><input type="text" name="tipo[]" class="form-control" value="${tipoTexto}" readonly></td>
-        <td><input type="text" name="servicio[]" class="form-control" value="${servicioTexto}" readonly></td>
-        <td><input type="number" name="precio[]" step="0.01" class="form-control text-end" placeholder="0.00"></td>
-        <td><button type="button" class="btn btn-danger btn-sm fa-solid fa-trash-can" data-del="row"> </button></td>
-      </tr>
-    `;
+  const fila = `
+    <tr>
+      <td></td>
+      <td>
+        <input type="text" class="form-control" value="${tipoTexto}" readonly>
+        <input type="hidden" name="tipo[]" value="${tipoTexto}">
+        <input type="hidden" name="origen[]" value="CATALOGO">
+      </td>
+      <td>
+        <input type="text" name="servicio[]" class="form-control" value="${servicioTexto}" readonly>
+      </td>
+      <td>
+        <input type="number" name="cantidad[]" class="form-control text-end" step="1" value="1">
+      </td>
+      <td>
+        <input type="text" name="precio[]" class="form-control text-end" inputmode="decimal" placeholder="0.00">
+      </td>
+      <td>
+        <button type="button" class="btn btn-danger btn-sm" data-del="row">
+          <i class="fa-solid fa-trash-can"></i>
+        </button>
+      </td>
+    </tr>
+  `;
+
 
     tabla.row.add($(fila)).draw(false);
     calcularTotales();
@@ -95,41 +111,78 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Eliminar fila de servicio 
 $('#tablaServicios tbody').on('click', '[data-del="row"]', function () {
-  if (!rolUsuario.includes('administrador') && !rolUsuario.includes('encargado')) {
-    Swal.fire({
-      icon: "warning",
-      title: "Acción no permitida",
-      text: "Solo el administrador o encargado pueden eliminar Servicios.",
-      confirmButtonColor: "#3085d6"
-    });
-    return;
-  }
 
   const table = $('#tablaServicios').DataTable();
   let tr = $(this).closest('tr');
-  let row = table.row(tr);
 
+  // si dio click en la fila "child" (responsive)
   if (tr.hasClass('child')) {
-    tr = tr.prev();
-    row = table.row(tr);
+    tr = tr.prev(); // la fila real es la anterior
   }
+
+  const row = table.row(tr);
 
   if (table.rows().count() > 1) {
     row.remove().draw(false);
   } else {
+    // si solo queda 1 fila, solo limpia (no borrar)
     tr.find('input').val('');
+    table.draw(false);
   }
 
   table.columns.adjust().responsive.recalc();
-  calcularCostos();
+  calcularTotales(); // ✅ ESTA ES LA FUNCIÓN CORRECTA
 });
+
+//AGREGAR MANUAL
+
+$('#btnAgregarManual').on('click', function () {
+  const desc = ($('#servicioManual').val() || '').trim();
+  if (!desc) {
+    Swal.fire({ icon: 'warning', title: 'Falta concepto', text: 'Escribe el concepto manual.' });
+    return;
+  }
+
+  const fila = `
+    <tr>
+      <td></td>
+      <td>
+        <input type="text" class="form-control" value="Manual" readonly>
+        <input type="hidden" name="tipo[]" value="">
+        <input type="hidden" name="origen[]" value="MANUAL">
+      </td>
+      <td>
+        <input type="text" name="servicio[]" class="form-control" value="${$('<div>').text(desc).html()}">
+      </td>
+      <td>
+        <input type="number" name="cantidad[]" class="form-control text-end" step="1" value="1">
+      </td>
+      <td>
+        <input type="text" name="precio[]" class="form-control text-end" inputmode="decimal" placeholder="0.00">
+      </td>
+      <td>
+        <button type="button" class="btn btn-danger btn-sm" data-del="row">
+          <i class="fa-solid fa-trash-can"></i>
+        </button>
+      </td>
+    </tr>
+  `;
+
+  tabla.row.add($(fila)).draw(false);
+  $('#servicioManual').val('');
+  calcularTotales();
+});
+
 
   // Calcular costo
   function calcularTotales() {
     let total = 0;
-    const precios = document.querySelectorAll('input[name="precio[]"]');
-    precios.forEach(input => {
-      total += parseFloat(input.value) || 0;
+
+    $('#tablaServicios tbody tr').each(function () {
+      const cant = parseFloat($(this).find('input[name="cantidad[]"]').val()) || 0;
+      let p = ($(this).find('input[name="precio[]"]').val() || '').toString().replace(/,/g,'.');
+      const precio = parseFloat(p) || 0;
+      total += (cant * precio);
     });
 
     const inputTotal = document.querySelector('input[name="total"]');
@@ -137,21 +190,22 @@ $('#tablaServicios tbody').on('click', '[data-del="row"]', function () {
     const inputResto = document.querySelector('input[name="resto"]');
     const errorDiv = document.getElementById("error-anticipo");
 
-    const anticipo = parseFloat(inputAnticipo.value) || 0;
+    const anticipo = parseFloat((inputAnticipo.value || '0').replace(/,/g,'.')) || 0;
     const resto = total - anticipo;
 
     inputTotal.value = total.toFixed(2);
     inputResto.value = resto.toFixed(2);
 
     if (anticipo > total) {
-      if (!errorDiv) return;
-      errorDiv.textContent = "El anticipo excede el total. Se debe regresar el sobrante al cliente.";
-      errorDiv.style.display = "block";
+      if (errorDiv) {
+        errorDiv.textContent = "El anticipo excede el total. Se debe regresar el sobrante al cliente.";
+        errorDiv.style.display = "block";
+      }
     } else {
-      if (!errorDiv) return;
-      errorDiv.style.display = "none";
+      if (errorDiv) errorDiv.style.display = "none";
     }
   }
+
 
   // Validaciones numéricas
   $(document).on('input', 'input[name="precio[]"], input[name="anticipo"]', function () {
@@ -180,7 +234,8 @@ $('#tablaServicios tbody').on('click', '[data-del="row"]', function () {
   });
 
   // Actualizar automáticamente totales
-  $(document).on('input', 'input[name="precio[]"], input[name="anticipo"]', calcularTotales);
+$(document).on('input', 'input[name="precio[]"], input[name="cantidad[]"], input[name="anticipo"]', calcularTotales);
+
 
     cargarTipos();
 
@@ -237,6 +292,98 @@ $('#tablaServicios tbody').on('click', '[data-del="row"]', function () {
       document.querySelector('input[name="resto"]').value = newResto.toFixed(2);
     }
   }
+
+// ==========================
+// WhatsApp (Avisar / Abrir chat) con selección de teléfono
+// ==========================
+function normalizarTelefono(raw) {
+  if (!raw) return "";
+  let tel = String(raw).replace(/\D+/g, ""); // solo dígitos
+
+  // Si viene con 10 dígitos, asumimos México y agregamos 52
+  if (tel.length === 10) tel = "52" + tel;
+
+  return tel;
+}
+
+function obtenerTelefonosValidos() {
+  const raw1 = document.getElementById("wa_tel1")?.value || "";
+  const raw2 = document.getElementById("wa_tel2")?.value || "";
+
+  const tel1 = normalizarTelefono(raw1);
+  const tel2 = normalizarTelefono(raw2);
+
+  const lista = [];
+  if (tel1) lista.push({ key: "tel1", tel: tel1, label: `Teléfono 1: ${raw1}` });
+  if (tel2) lista.push({ key: "tel2", tel: tel2, label: `Teléfono 2: ${raw2}` });
+
+  return lista;
+}
+
+async function elegirTelefonoSiEsNecesario() {
+  const telefonos = obtenerTelefonosValidos();
+
+  if (telefonos.length === 0) {
+    await Swal.fire("Sin teléfono", "Este cliente no tiene teléfono registrado.", "warning");
+    return null;
+  }
+
+  // Si solo hay uno → no preguntar
+  if (telefonos.length === 1) return telefonos[0].tel;
+
+  // Si hay dos → mostrar radio buttons
+  const inputOptions = {};
+  telefonos.forEach(t => {
+    inputOptions[t.tel] = t.label;
+  });
+
+  const { value: telSeleccionado } = await Swal.fire({
+    icon: "question",
+    title: "¿A cuál teléfono quieres enviar?",
+    input: "radio",
+    inputOptions: inputOptions,
+    inputValidator: (value) => {
+      if (!value) {
+        return "Selecciona un teléfono";
+      }
+    },
+    confirmButtonText: '<i class="fa-brands fa-whatsapp me-1"></i> Continuar',
+    cancelButtonText: "Cerrar",
+    showCancelButton: true,
+    confirmButtonColor: "#198754"
+  });
+
+  return telSeleccionado || null;
+}
+
+
+async function abrirWhatsConMensaje() {
+  const tel = await elegirTelefonoSiEsNecesario();
+  if (!tel) return;
+
+  const cliente = document.getElementById("wa_cliente")?.value?.trim() || "cliente";
+  const trabajo = document.querySelector('input[name="trabajo"]')?.value?.trim() || "tu trabajo";
+
+  // (Opcional) cambiar estatus en pantalla
+  // const estatusSelect = document.getElementById("estatus");
+  // if (estatusSelect) estatusSelect.value = "Cliente Avisado";
+
+  const texto = `¡Hola ${cliente}! Te informamos de ICT que tu trabajo ${trabajo} ya está listo para ser recogido. ¡Te esperamos!`;
+  const url = `https://wa.me/${tel}?text=${encodeURIComponent(texto)}`;
+  window.open(url, "_blank", "noopener");
+}
+
+async function abrirWhatsChat() {
+  const tel = await elegirTelefonoSiEsNecesario();
+  if (!tel) return;
+
+  const url = `https://wa.me/${tel}`;
+  window.open(url, "_blank", "noopener");
+}
+
+document.getElementById("btnWhatsAvisar")?.addEventListener("click", abrirWhatsConMensaje);
+document.getElementById("btnWhatsChat")?.addEventListener("click", abrirWhatsChat);
+
 
 
 });
